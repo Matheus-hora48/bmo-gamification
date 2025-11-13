@@ -1,0 +1,196 @@
+{
+  "info": {
+    "name": "BMO Gamification API",
+    "description": "API de gamificação do BMO - Sistema de conquistas, XP, níveis e streaks",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "bmo-gamification"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "value",
+        "value": "{{GAMIFICATION_API_TOKEN}}",
+        "type": "string"
+      },
+      {
+        "key": "key",
+        "value": "x-api-token",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "BASE_URL",
+      "value": "http://localhost:3005/api",
+      "type": "string"
+    },
+    {
+      "key": "GAMIFICATION_API_TOKEN",
+      "value": "a54192c9bcd4cf0e2808be244fc18db28d7b52072dd6018879ab9263986b4ce4",
+      "type": "string"
+    },
+    {
+      "key": "TEST_USER_ID",
+      "value": "test-user-123",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3005/health",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3005",
+          "path": ["health"]
+        },
+        "description": "Verifica o status da API (não requer autenticação)"
+      }
+    },
+    {
+      "name": "Gamification",
+      "item": [
+        {
+          "name": "Process Card Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{TEST_USER_ID}}\",\n  \"cardId\": \"card-123\",\n  \"difficulty\": \"good\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/gamification/process-review",
+              "host": ["{{BASE_URL}}"],
+              "path": ["gamification", "process-review"]
+            },
+            "description": "Processa uma revisão de card e adiciona XP baseado na dificuldade:\n- again: 5 XP\n- hard: 10 XP\n- good: 15 XP\n- easy: 20 XP\n\nTambém registra progresso diário e verifica conquistas."
+          }
+        },
+        {
+          "name": "Card Created",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{TEST_USER_ID}}\",\n  \"cardId\": \"card-new-456\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/gamification/card-created",
+              "host": ["{{BASE_URL}}"],
+              "path": ["gamification", "card-created"]
+            },
+            "description": "Registra a criação de um novo card e adiciona 25 XP ao usuário."
+          }
+        },
+        {
+          "name": "Deck Created",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"{{TEST_USER_ID}}\",\n  \"deckId\": \"deck-new-789\"\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/gamification/deck-created",
+              "host": ["{{BASE_URL}}"],
+              "path": ["gamification", "deck-created"]
+            },
+            "description": "Registra a criação de um novo deck e adiciona 50 XP ao usuário."
+          }
+        },
+        {
+          "name": "Get User Progress",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/gamification/progress/{{TEST_USER_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["gamification", "progress", "{{TEST_USER_ID}}"]
+            },
+            "description": "Retorna o progresso completo do usuário incluindo:\n- XP total\n- Nível atual\n- XP atual no nível\n- Total de cards revisados\n- Total de cards criados\n- Total de decks criados\n- Streak atual"
+          }
+        },
+        {
+          "name": "Get Daily Progress",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/gamification/daily-progress/{{TEST_USER_ID}}?date=2025-11-11",
+              "host": ["{{BASE_URL}}"],
+              "path": ["gamification", "daily-progress", "{{TEST_USER_ID}}"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2025-11-11",
+                  "description": "Data no formato YYYY-MM-DD (opcional, padrão: hoje)"
+                }
+              ]
+            },
+            "description": "Retorna o progresso diário do usuário para uma data específica:\n- Cards revisados no dia\n- Meta diária completa (20 cards)\n- XP ganho no dia"
+          }
+        },
+        {
+          "name": "Get User Achievements",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{BASE_URL}}/gamification/achievements/{{TEST_USER_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["gamification", "achievements", "{{TEST_USER_ID}}"]
+            },
+            "description": "Retorna todas as conquistas desbloqueadas pelo usuário, incluindo:\n- ID da conquista\n- Nome e descrição\n- Tier (Bronze, Prata, Ouro, Platina, Diamante)\n- XP reward\n- Data de desbloqueio\n- Progresso atual"
+          }
+        },
+        {
+          "name": "Check Achievements",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"types\": [\"reviews_completed\", \"cards_created\"]\n}"
+            },
+            "url": {
+              "raw": "{{BASE_URL}}/gamification/check-achievements/{{TEST_USER_ID}}",
+              "host": ["{{BASE_URL}}"],
+              "path": ["gamification", "check-achievements", "{{TEST_USER_ID}}"]
+            },
+            "description": "Força a verificação de conquistas pendentes.\n\nBody (opcional):\n- types: array de AchievementType para filtrar (padrão: todos os tipos)\n\nRetorna as conquistas recém-desbloqueadas."
+          }
+        }
+      ]
+    }
+  ]
+}

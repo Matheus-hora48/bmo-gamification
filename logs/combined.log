@@ -1,0 +1,182 @@
+2025-11-12 10:40:14 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 10:41:27 [info]: GET /
+2025-11-12 10:41:27 [warn]: Route not found: GET /
+2025-11-12 11:00:51 [info]: GET /
+2025-11-12 11:00:51 [warn]: Route not found: GET /
+2025-11-12 11:01:03 [info]: GET /api
+2025-11-12 11:01:03 [warn]: Route not found: GET /api
+2025-11-12 11:01:15 [info]: GET /process-review
+2025-11-12 11:01:15 [warn]: Route not found: GET /process-review
+2025-11-12 11:01:32 [info]: GET /api
+2025-11-12 11:01:32 [warn]: Route not found: GET /api
+2025-11-12 11:01:47 [info]: GET /gamification
+2025-11-12 11:01:47 [warn]: Route not found: GET /gamification
+2025-11-12 11:01:59 [info]: GET /gamification/deck-created
+2025-11-12 11:01:59 [warn]: Route not found: GET /gamification/deck-created
+2025-11-12 11:03:10 [info]: GET /api/gamification/progress/SEU_USER_ID
+2025-11-12 11:03:16 [info]: GET /api/gamification/progress/81
+2025-11-12 11:03:29 [info]: GET /api/
+2025-11-12 11:03:29 [warn]: Route not found: GET /api/
+2025-11-12 11:06:15 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 11:06:18 [info]: GET /api-docs/
+2025-11-12 11:06:28 [info]: GET /api-docs/
+2025-11-12 11:49:26 [info]: POST /api/gamification/card-created
+2025-11-12 11:49:26 [debug]: POST /card-created - Registrando criação de card
+2025-11-12 11:49:30 [info]: Criação de card registrada com sucesso
+2025-11-12 11:52:23 [info]: POST /api/gamification/process-review
+2025-11-12 11:52:23 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 11:52:26 [info]: Revisão de card processada com sucesso
+2025-11-12 11:52:37 [info]: POST /api/gamification/process-review
+2025-11-12 11:52:37 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 11:52:38 [info]: Revisão de card processada com sucesso
+2025-11-12 12:41:14 [info]: POST /api/gamification/process-review
+2025-11-12 12:41:14 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 12:41:16 [info]: Revisão de card processada com sucesso
+2025-11-12 12:41:22 [info]: POST /api/gamification/process-review
+2025-11-12 12:41:22 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 12:41:23 [info]: Revisão de card processada com sucesso
+2025-11-12 12:41:28 [info]: POST /api/gamification/process-review
+2025-11-12 12:41:28 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 12:41:30 [info]: Revisão de card processada com sucesso
+2025-11-12 12:41:37 [info]: POST /api/gamification/process-review
+2025-11-12 12:41:37 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 12:41:38 [info]: Revisão de card processada com sucesso
+2025-11-12 12:41:42 [info]: POST /api/gamification/process-review
+2025-11-12 12:41:42 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 12:41:43 [info]: Revisão de card processada com sucesso
+2025-11-12 12:41:55 [info]: POST /api/gamification/process-review
+2025-11-12 12:41:55 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 12:41:56 [info]: Revisão de card processada com sucesso
+2025-11-12 13:11:43 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 16:34:55 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 16:35:08 [info]: POST /api/gamification/process-review
+2025-11-12 16:35:08 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 16:35:14 [info]: Revisão de card processada com sucesso
+2025-11-12 17:00:52 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 17:01:01 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 19:20:57 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 19:20:57 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 19:21:31 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 19:21:31 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 19:21:45 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 19:21:45 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 19:21:52 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 19:21:52 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 19:43:31 [info]: POST /api/gamification/deck-created
+2025-11-12 19:43:31 [debug]: POST /deck-created - Registrando criação de deck
+2025-11-12 19:43:33 [info]: Criação de deck registrada com sucesso
+2025-11-12 21:42:29 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 21:42:29 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 21:47:03 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 21:47:03 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 21:49:38 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 21:49:38 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 21:49:54 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 21:49:55 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 21:50:10 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 21:50:10 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 22:09:41 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 22:24:20 [info]: POST /api/gamification/process-review
+2025-11-12 22:24:20 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:24:23 [info]: Revisão de card processada com sucesso
+2025-11-12 22:26:26 [info]: POST /api/gamification/process-review
+2025-11-12 22:26:26 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:26:27 [info]: Revisão de card processada com sucesso
+2025-11-12 22:40:18 [info]: POST /api/gamification/process-review
+2025-11-12 22:40:18 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:40:20 [info]: Revisão de card processada com sucesso
+2025-11-12 22:40:33 [info]: POST /api/gamification/process-review
+2025-11-12 22:40:33 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:40:34 [info]: Revisão de card processada com sucesso
+2025-11-12 22:40:45 [info]: POST /api/gamification/process-review
+2025-11-12 22:40:45 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:40:47 [info]: Revisão de card processada com sucesso
+2025-11-12 22:40:56 [info]: POST /api/gamification/process-review
+2025-11-12 22:40:56 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:40:58 [info]: Revisão de card processada com sucesso
+2025-11-12 22:41:10 [info]: POST /api/gamification/process-review
+2025-11-12 22:41:10 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:41:12 [info]: Revisão de card processada com sucesso
+2025-11-12 22:41:30 [info]: POST /api/gamification/process-review
+2025-11-12 22:41:30 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:41:31 [info]: Revisão de card processada com sucesso
+2025-11-12 22:41:57 [info]: POST /api/gamification/process-review
+2025-11-12 22:41:57 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:41:58 [info]: Revisão de card processada com sucesso
+2025-11-12 22:42:12 [info]: POST /api/gamification/process-review
+2025-11-12 22:42:12 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:42:14 [info]: Revisão de card processada com sucesso
+2025-11-12 22:42:29 [info]: POST /api/gamification/process-review
+2025-11-12 22:42:29 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:42:31 [info]: Revisão de card processada com sucesso
+2025-11-12 22:46:08 [info]: POST /api/gamification/process-review
+2025-11-12 22:46:08 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:46:10 [info]: Revisão de card processada com sucesso
+2025-11-12 22:46:42 [info]: POST /api/gamification/process-review
+2025-11-12 22:46:42 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:46:43 [info]: Revisão de card processada com sucesso
+2025-11-12 22:47:12 [info]: POST /api/gamification/process-review
+2025-11-12 22:47:12 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:47:13 [info]: Revisão de card processada com sucesso
+2025-11-12 22:48:08 [info]: POST /api/gamification/process-review
+2025-11-12 22:48:08 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:48:09 [info]: Revisão de card processada com sucesso
+2025-11-12 22:48:18 [info]: POST /api/gamification/process-review
+2025-11-12 22:48:18 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:48:19 [info]: Revisão de card processada com sucesso
+2025-11-12 22:48:27 [info]: POST /api/gamification/process-review
+2025-11-12 22:48:27 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:48:28 [info]: Revisão de card processada com sucesso
+2025-11-12 22:48:46 [info]: POST /api/gamification/process-review
+2025-11-12 22:48:46 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:48:47 [info]: Revisão de card processada com sucesso
+2025-11-12 22:48:57 [info]: POST /api/gamification/process-review
+2025-11-12 22:48:57 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:48:58 [info]: Revisão de card processada com sucesso
+2025-11-12 22:49:08 [info]: POST /api/gamification/process-review
+2025-11-12 22:49:08 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:49:09 [info]: Revisão de card processada com sucesso
+2025-11-12 22:49:25 [info]: POST /api/gamification/process-review
+2025-11-12 22:49:25 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:49:27 [info]: Revisão de card processada com sucesso
+2025-11-12 22:49:41 [info]: POST /api/gamification/process-review
+2025-11-12 22:49:41 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 22:49:42 [info]: Revisão de card processada com sucesso
+2025-11-12 23:05:33 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 23:05:52 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 23:06:14 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 23:15:10 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-12 23:27:03 [info]: POST /api/gamification/process-review
+2025-11-12 23:27:03 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 23:27:05 [info]: Revisão de card processada com sucesso
+2025-11-12 23:27:23 [info]: POST /api/gamification/process-review
+2025-11-12 23:27:23 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 23:27:24 [info]: Revisão de card processada com sucesso
+2025-11-12 23:27:53 [info]: POST /api/gamification/process-review
+2025-11-12 23:27:53 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 23:27:54 [info]: Revisão de card processada com sucesso
+2025-11-12 23:28:09 [info]: POST /api/gamification/process-review
+2025-11-12 23:28:09 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 23:28:11 [info]: Revisão de card processada com sucesso
+2025-11-12 23:28:17 [info]: POST /api/gamification/process-review
+2025-11-12 23:28:17 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 23:28:18 [info]: Revisão de card processada com sucesso
+2025-11-12 23:28:26 [info]: POST /api/gamification/process-review
+2025-11-12 23:28:26 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 23:28:28 [info]: Revisão de card processada com sucesso
+2025-11-12 23:28:43 [info]: POST /api/gamification/process-review
+2025-11-12 23:28:43 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 23:28:44 [info]: Revisão de card processada com sucesso
+2025-11-12 23:29:03 [info]: POST /api/gamification/process-review
+2025-11-12 23:29:03 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 23:29:04 [info]: Revisão de card processada com sucesso
+2025-11-12 23:29:12 [info]: POST /api/gamification/process-review
+2025-11-12 23:29:12 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 23:29:13 [info]: Revisão de card processada com sucesso
+2025-11-12 23:48:49 [info]: POST /api/gamification/process-review
+2025-11-12 23:48:49 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 23:48:51 [info]: Revisão de card processada com sucesso
+2025-11-12 23:50:37 [info]: POST /api/gamification/process-review
+2025-11-12 23:50:37 [debug]: POST /process-review - Iniciando processamento
+2025-11-12 23:50:39 [info]: Revisão de card processada com sucesso
+2025-11-12 23:53:31 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
