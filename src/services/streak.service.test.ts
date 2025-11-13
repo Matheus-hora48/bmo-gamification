@@ -286,15 +286,18 @@ describe("StreakService", () => {
 
       vi.mocked(mockFirestore.getUserProgress).mockResolvedValue(userProgress);
       vi.mocked(mockXpService.addXP).mockResolvedValue({
-        userId,
-        level: 1,
-        currentXP: 200,
-        totalXP: 200,
-        currentStreak: 7,
-        longestStreak: 7,
-        lastActivityDate: new Date(),
-        achievements: [],
-        createdAt: new Date(),
+        userProgress: {
+          userId,
+          level: 1,
+          currentXP: 200,
+          totalXP: 200,
+          currentStreak: 7,
+          longestStreak: 7,
+          lastActivityDate: new Date(),
+          achievements: [],
+          createdAt: new Date(),
+        },
+        levelUpInfo: { leveledUp: false, oldLevel: 1, newLevel: 1, levelsGained: 0 }
       });
 
       const result = await service.checkStreakBonus(userId, 7);
@@ -325,15 +328,18 @@ describe("StreakService", () => {
 
       vi.mocked(mockFirestore.getUserProgress).mockResolvedValue(userProgress);
       vi.mocked(mockXpService.addXP).mockResolvedValue({
-        userId,
-        level: 2,
-        currentXP: 350,
-        totalXP: 550,
-        currentStreak: 30,
-        longestStreak: 30,
-        lastActivityDate: new Date(),
-        achievements: [],
-        createdAt: new Date(),
+        userProgress: {
+          userId,
+          level: 2,
+          currentXP: 350,
+          totalXP: 550,
+          currentStreak: 30,
+          longestStreak: 30,
+          lastActivityDate: new Date(),
+          achievements: [],
+          createdAt: new Date(),
+        },
+        levelUpInfo: { leveledUp: true, oldLevel: 1, newLevel: 2, levelsGained: 1 }
       });
 
       const result = await service.checkStreakBonus(userId, 30);
@@ -411,15 +417,18 @@ describe("StreakService", () => {
 
       vi.mocked(mockFirestore.getUserProgress).mockResolvedValue(userProgress);
       vi.mocked(mockXpService.addXP).mockResolvedValue({
-        userId,
-        level: 2,
-        currentXP: 250,
-        totalXP: 450,
-        currentStreak: 14,
-        longestStreak: 14,
-        lastActivityDate: new Date(),
-        achievements: [],
-        createdAt: new Date(),
+        userProgress: {
+          userId,
+          level: 2,
+          currentXP: 250,
+          totalXP: 450,
+          currentStreak: 14,
+          longestStreak: 14,
+          lastActivityDate: new Date(),
+          achievements: [],
+          createdAt: new Date(),
+        },
+        levelUpInfo: { leveledUp: true, oldLevel: 1, newLevel: 2, levelsGained: 1 }
       });
 
       const result = await service.checkStreakBonus(userId, 14);
