@@ -89,7 +89,12 @@ describe("AchievementService", () => {
       );
       vi.spyOn(mockXPService, "addXP").mockResolvedValue({
         userProgress: {} as UserProgress,
-        levelUpInfo: { leveledUp: false, oldLevel: 1, newLevel: 1, levelsGained: 0 }
+        levelUpInfo: {
+          leveledUp: false,
+          oldLevel: 1,
+          newLevel: 1,
+          levelsGained: 0,
+        },
       });
 
       const result = await service.checkAchievements(mockUserId);
@@ -134,7 +139,12 @@ describe("AchievementService", () => {
       );
       vi.spyOn(mockXPService, "addXP").mockResolvedValue({
         userProgress: {} as UserProgress,
-        levelUpInfo: { leveledUp: false, oldLevel: 1, newLevel: 1, levelsGained: 0 }
+        levelUpInfo: {
+          leveledUp: false,
+          oldLevel: 1,
+          newLevel: 1,
+          levelsGained: 0,
+        },
       });
 
       const result = await service.checkAchievements(mockUserId, [
@@ -341,7 +351,12 @@ describe("AchievementService", () => {
       );
       vi.spyOn(mockXPService, "addXP").mockResolvedValue({
         userProgress: {} as UserProgress,
-        levelUpInfo: { leveledUp: false, oldLevel: 1, newLevel: 1, levelsGained: 0 }
+        levelUpInfo: {
+          leveledUp: false,
+          oldLevel: 1,
+          newLevel: 1,
+          levelsGained: 0,
+        },
       });
 
       await service.unlockAchievement(mockUserId, "cards_10");

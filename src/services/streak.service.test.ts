@@ -297,7 +297,12 @@ describe("StreakService", () => {
           achievements: [],
           createdAt: new Date(),
         },
-        levelUpInfo: { leveledUp: false, oldLevel: 1, newLevel: 1, levelsGained: 0 }
+        levelUpInfo: {
+          leveledUp: false,
+          oldLevel: 1,
+          newLevel: 1,
+          levelsGained: 0,
+        },
       });
 
       const result = await service.checkStreakBonus(userId, 7);
@@ -339,7 +344,12 @@ describe("StreakService", () => {
           achievements: [],
           createdAt: new Date(),
         },
-        levelUpInfo: { leveledUp: true, oldLevel: 1, newLevel: 2, levelsGained: 1 }
+        levelUpInfo: {
+          leveledUp: true,
+          oldLevel: 1,
+          newLevel: 2,
+          levelsGained: 1,
+        },
       });
 
       const result = await service.checkStreakBonus(userId, 30);
@@ -428,7 +438,12 @@ describe("StreakService", () => {
           achievements: [],
           createdAt: new Date(),
         },
-        levelUpInfo: { leveledUp: true, oldLevel: 1, newLevel: 2, levelsGained: 1 }
+        levelUpInfo: {
+          leveledUp: true,
+          oldLevel: 1,
+          newLevel: 2,
+          levelsGained: 1,
+        },
       });
 
       const result = await service.checkStreakBonus(userId, 14);
