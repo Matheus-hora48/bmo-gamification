@@ -8,42 +8,64 @@ const defaultServiceAccountPath = path.resolve(
   "../../firebase-service-account.json"
 );
 
-function loadServiceAccount(): ServiceAccount {
+function loadServiceAccount(): ServiceAccount | null {
+  // 1. Tentar carregar das variáveis de ambiente (produção)
   const inlineCredentials = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-
+  
   if (inlineCredentials) {
-    return JSON.parse(inlineCredentials) as ServiceAccount;
+    try {
+      return JSON.parse(inlineCredentials) as ServiceAccount;
+    } catch (error) {
+      console.warn("Erro ao parsear FIREBASE_SERVICE_ACCOUNT_JSON:", error);
+    }
   }
 
+  // 2. Tentar carregar do arquivo (desenvolvimento)
   const customPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
   const resolvedPath = customPath
     ? path.resolve(process.cwd(), customPath)
     : defaultServiceAccountPath;
 
-  if (!existsSync(resolvedPath)) {
-    throw new Error(
-      `Arquivo de credenciais do Firebase não encontrado em "${resolvedPath}". ` +
-        "Defina FIREBASE_SERVICE_ACCOUNT_PATH ou FIREBASE_SERVICE_ACCOUNT_JSON."
-    );
+  if (existsSync(resolvedPath)) {
+    try {
+      const fileContents = readFileSync(resolvedPath, "utf8");
+      return JSON.parse(fileContents) as ServiceAccount;
+    } catch (error) {
+      console.warn(`Erro ao carregar arquivo Firebase em "${resolvedPath}":`, error);
+    }
   }
 
-  const fileContents = readFileSync(resolvedPath, "utf8");
+  // 3. Se não conseguiu carregar de nenhuma forma
+  console.warn(
+    `Credenciais do Firebase não encontradas. Tentativas:\n` +
+    `- Variável FIREBASE_SERVICE_ACCOUNT_JSON: ${inlineCredentials ? 'Definida mas inválida' : 'Não definida'}\n` +
+    `- Arquivo em "${resolvedPath}": ${existsSync(resolvedPath) ? 'Existe mas inválido' : 'Não existe'}\n` +
+    `Firebase será inicializado sem credenciais (modo compatibilidade).`
+  );
+  
+  return null;
+}
 
-  try {
-    return JSON.parse(fileContents) as ServiceAccount;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    throw new Error(
-      `Não foi possível interpretar o arquivo de credenciais do Firebase. Motivo: ${message}`
-    );
+function initializeFirebase() {
+  if (admin.apps.length) {
+    return admin.app();
+  }
+
+  const serviceAccount = loadServiceAccount();
+  
+  if (serviceAccount) {
+    return admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+    });
+  } else {
+    // Modo compatibilidade - inicializar sem credenciais
+    // Isso funcionará se as credenciais padrão do ambiente estiverem disponíveis
+    console.log("Inicializando Firebase com credenciais padrão do ambiente...");
+    return admin.initializeApp();
   }
 }
 
-const firebaseApp = admin.apps.length
-  ? admin.app()
-  : admin.initializeApp({
-      credential: admin.credential.cert(loadServiceAccount()),
-    });
+const firebaseApp = initializeFirebase();
 
 const firestore = admin.firestore(firebaseApp);
 firestore.settings({ ignoreUndefinedProperties: true });
