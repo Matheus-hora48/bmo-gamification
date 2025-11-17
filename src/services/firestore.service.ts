@@ -379,6 +379,106 @@ export class FirestoreService {
     return snapshot.data().count;
   }
 
+  // =============================================================================
+  // STATISTICS & RANKINGS SUPPORT METHODS
+  // =============================================================================
+
+  /**
+   * Busca todos os IDs de usuários que possuem progresso
+   * @returns Array com IDs de usuários
+   */
+  async getAllUserIds(): Promise<string[]> {
+    try {
+      const snapshot = await this.collections.users().listDocuments();
+      return snapshot.map((doc) => doc.id);
+    } catch (error) {
+      throw new Error(
+        `Erro ao buscar usuários: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
+    }
+  }
+
+  /**
+   * Busca transações de XP por período e fonte
+   */
+  async getXPTransactionsByPeriod(
+    startDate: Date,
+    endDate: Date,
+    source?: XPSource
+  ): Promise<XPTransaction[]> {
+    try {
+      // Usar collection group para buscar em todas as subcollections de transactions
+      let query = admin
+        .firestore()
+        .collectionGroup("transactions")
+        .where("timestamp", ">=", startDate)
+        .where("timestamp", "<=", endDate);
+
+      if (source) {
+        query = query.where("source", "==", source);
+      }
+
+      const snapshot = await query.get();
+
+      return snapshot.docs.map((doc) => {
+        const data = doc.data();
+        // Extrair userId do path do documento: xpTransactions/{userId}/transactions/{docId}
+        const pathParts = doc.ref.path.split("/");
+        const userId = pathParts[1] || "";
+
+        return this.mapXPTransaction(doc as any, userId);
+      });
+    } catch (error) {
+      console.error("Erro ao buscar transações por período:", error);
+      return [];
+    }
+  }
+
+  /**
+   * Busca dados de sessões de estudo por período
+   */
+  async getStudySessionsByPeriod(
+    userId: string,
+    startDate: Date,
+    endDate: Date
+  ): Promise<
+    Array<{
+      sessionDurationMinutes: number;
+      cardsReviewed: number;
+      accuracyCount: number;
+      totalAnswers: number;
+      studyTime: string;
+      timestamp: Date;
+    }>
+  > {
+    try {
+      const snapshot = await admin
+        .firestore()
+        .collection("studySessions")
+        .where("userId", "==", userId)
+        .where("timestamp", ">=", startDate)
+        .where("timestamp", "<=", endDate)
+        .get();
+
+      return snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          sessionDurationMinutes: data.sessionDurationMinutes || 0,
+          cardsReviewed: data.cardsReviewed || 0,
+          accuracyCount: data.accuracyCount || 0,
+          totalAnswers: data.totalAnswers || 0,
+          studyTime: data.studyTime || "afternoon",
+          timestamp: data.timestamp?.toDate?.() || data.timestamp || new Date(),
+        };
+      });
+    } catch (error) {
+      console.error("Erro ao buscar sessões de estudo:", error);
+      return [];
+    }
+  }
+
   private mapUserProgress(userId: string, data: DocumentData): UserProgress {
     const progress: UserProgress = {
       userId,
@@ -500,27 +600,6 @@ export class FirestoreService {
     }
 
     return normalized;
-  }
-
-  /**
-   * Busca todos os IDs de usuários que possuem progresso
-   * @returns Array com IDs de usuários
-   */
-  async getAllUserIds(): Promise<string[]> {
-    try {
-      const snapshot = await admin
-        .firestore()
-        .collection("users")
-        .listDocuments();
-
-      return snapshot.map((doc) => doc.id);
-    } catch (error) {
-      throw new Error(
-        `Erro ao buscar usuários: ${
-          error instanceof Error ? error.message : String(error)
-        }`
-      );
-    }
   }
 
   private mapStreakData(userId: string, data: DocumentData): StreakData {
