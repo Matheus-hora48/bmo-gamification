@@ -6,10 +6,12 @@ import swaggerUi from "swagger-ui-express";
 import "./config/firebase.config";
 import { swaggerSpec } from "./config/swagger.config";
 import scheduleUpdateStreaks from "./jobs/update-streaks.job";
+import { authMiddleware } from "./middlewares/auth.middleware";
 import {
   errorMiddleware,
   notFoundMiddleware,
 } from "./middlewares/error.middleware";
+import { rateLimiter } from "./middlewares/rate-limit.middleware";
 import routes from "./routes";
 import { logger } from "./utils/logger";
 
@@ -40,7 +42,7 @@ app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
-// Swagger Documentation
+// Swagger Documentation (público)
 app.use(
   "/api-docs",
   swaggerUi.serve,
@@ -50,8 +52,18 @@ app.use(
   })
 );
 
-// Montar todas as rotas da aplicação
-app.use("/api", routes);
+// =============================================================================
+// ETAPA 4.4 - INTEGRAÇÃO COM APP.TS
+// =============================================================================
+
+// Montar todas as rotas da aplicação com middlewares de segurança
+// Aplicar rate limiting e autenticação para todas as rotas /api/*
+app.use("/api", rateLimiter, authMiddleware, routes);
+
+// ROTAS REGISTRADAS:
+// - /api/statistics/* (getDeckStatistics, getUserStatistics, updateSession)
+// - /api/rankings/* (getMonthlyRanking, getYearlyRanking, getUserPosition)
+// - /api/gamification/* (rotas de gamificação existentes)
 
 // Middleware de rota não encontrada (404)
 app.use(notFoundMiddleware);
