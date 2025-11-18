@@ -11,9 +11,44 @@ const statisticsController = new StatisticsController();
 
 /**
  * @swagger
+ * /api/statistics/deck/{userId}:
+ *   get:
+ *     summary: Busca estatísticas de todos os decks do usuário
+ *     tags: [Statistics]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID do usuário
+ *     responses:
+ *       200:
+ *         description: Estatísticas de todos os decks encontradas
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/DeckStatistics'
+ *       404:
+ *         description: Estatísticas não encontradas
+ *       500:
+ *         description: Erro interno do servidor
+ */
+
+/**
+ * @swagger
  * /api/statistics/deck/{userId}/{deckId}:
  *   get:
- *     summary: Busca estatísticas de um deck específico ou todos os decks do usuário
+ *     summary: Busca estatísticas de um deck específico
  *     tags: [Statistics]
  *     security:
  *       - bearerAuth: []
@@ -26,10 +61,10 @@ const statisticsController = new StatisticsController();
  *         description: ID do usuário
  *       - in: path
  *         name: deckId
- *         required: false
+ *         required: true
  *         schema:
  *           type: string
- *         description: ID do deck (opcional - se não fornecido, retorna stats de todos os decks)
+ *         description: ID do deck
  *     responses:
  *       200:
  *         description: Estatísticas do deck encontradas
@@ -41,18 +76,23 @@ const statisticsController = new StatisticsController();
  *                 success:
  *                   type: boolean
  *                 data:
- *                   oneOf:
- *                     - $ref: '#/components/schemas/DeckStatistics'
- *                     - type: array
- *                       items:
- *                         $ref: '#/components/schemas/DeckStatistics'
+ *                   $ref: '#/components/schemas/DeckStatistics'
  *       404:
  *         description: Estatísticas não encontradas
  *       500:
  *         description: Erro interno do servidor
  */
+
+// Rota para deck específico (deve vir primeiro para evitar conflito)
 router.get(
-  "/deck/:userId/:deckId?",
+  "/deck/:userId/:deckId",
+  authMiddleware,
+  statisticsController.getDeckStatistics
+);
+
+// Rota para todos os decks do usuário
+router.get(
+  "/deck/:userId",
   authMiddleware,
   statisticsController.getDeckStatistics
 );

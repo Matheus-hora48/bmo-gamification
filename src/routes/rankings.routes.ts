@@ -75,11 +75,15 @@ const rankingsController = new RankingsController();
  *       500:
  *         description: Erro interno do servidor
  */
+// Rota para ranking mensal com data específica
 router.get(
-  "/monthly/:date?",
+  "/monthly/:date",
   authMiddleware,
   rankingsController.getMonthlyRanking
 );
+
+// Rota para ranking mensal atual (sem data)
+router.get("/monthly", authMiddleware, rankingsController.getMonthlyRanking);
 
 /**
  * @swagger
@@ -147,11 +151,15 @@ router.get(
  *       500:
  *         description: Erro interno do servidor
  */
+// Rota para ranking anual com ano específico
 router.get(
-  "/yearly/:year?",
+  "/yearly/:year",
   authMiddleware,
   rankingsController.getYearlyRanking
 );
+
+// Rota para ranking anual atual (sem ano)
+router.get("/yearly", authMiddleware, rankingsController.getYearlyRanking);
 
 /**
  * @swagger
