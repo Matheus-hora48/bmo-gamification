@@ -14,6 +14,7 @@ const createUserProgress = (
   totalXP: 0,
   currentStreak: 0,
   longestStreak: 0,
+      totalCardsReviewed: 0,
   lastActivityDate: null,
   achievements: [],
   createdAt: new Date(0),

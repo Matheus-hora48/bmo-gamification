@@ -58,17 +58,43 @@ export class DailyGoalService {
       const newCardsReviewed = existing.cardsReviewed + 1;
       const goalMet = newCardsReviewed >= DAILY_GOAL_TARGET;
 
-      return await this.firestore.updateDailyProgress(userId, reviewDate, {
+      // Atualizar progresso diário
+      const dailyProgress = await this.firestore.updateDailyProgress(userId, reviewDate, {
         cardsReviewed: newCardsReviewed,
         goalMet,
       });
+
+      // Incrementar totalCardsReviewed no perfil do usuário
+      const userProgress = await this.firestore.getUserProgress(userId);
+      await this.firestore.updateUserProgress(userId, {
+        totalCardsReviewed: (userProgress.totalCardsReviewed || 0) + 1,
+      });
+
+      return dailyProgress;
     } catch (error) {
       if (error instanceof Error && error.message.includes("não encontrado")) {
-        return await this.firestore.updateDailyProgress(userId, reviewDate, {
+        // Criar progresso diário
+        const dailyProgress = await this.firestore.updateDailyProgress(userId, reviewDate, {
           cardsReviewed: 1,
           goalMet: 1 >= DAILY_GOAL_TARGET,
           xpEarned: 0,
         });
+
+        // Incrementar totalCardsReviewed no perfil do usuário
+        try {
+          const userProgress = await this.firestore.getUserProgress(userId);
+          await this.firestore.updateUserProgress(userId, {
+            totalCardsReviewed: (userProgress.totalCardsReviewed || 0) + 1,
+          });
+        } catch (userError) {
+          // Se o usuário não existir, criar
+          await this.firestore.createUserProgress(userId);
+          await this.firestore.updateUserProgress(userId, {
+            totalCardsReviewed: 1,
+          });
+        }
+
+        return dailyProgress;
       }
       throw error;
     }

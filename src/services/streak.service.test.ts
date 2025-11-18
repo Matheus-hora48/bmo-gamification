@@ -69,6 +69,7 @@ describe("StreakService", () => {
         totalXP: 0,
         currentStreak: 5,
         longestStreak: 10,
+      totalCardsReviewed: 0,
         lastActivityDate: new Date("2025-11-10"),
         achievements: [],
         createdAt: new Date(),
@@ -91,6 +92,7 @@ describe("StreakService", () => {
         expect.objectContaining({
           currentStreak: 6,
           longestStreak: 10,
+      totalCardsReviewed: 0,
         })
       );
     });
@@ -129,6 +131,7 @@ describe("StreakService", () => {
         totalXP: 0,
         currentStreak: 9,
         longestStreak: 9,
+      totalCardsReviewed: 0,
         lastActivityDate: new Date("2025-11-10"),
         achievements: [],
         createdAt: new Date(),
@@ -176,6 +179,7 @@ describe("StreakService", () => {
         totalXP: 0,
         currentStreak: 0,
         longestStreak: 0,
+      totalCardsReviewed: 0,
         lastActivityDate: null,
         achievements: [],
         createdAt: new Date(),
@@ -238,6 +242,7 @@ describe("StreakService", () => {
         expect.objectContaining({
           currentStreak: 0,
           longestStreak: 20,
+      totalCardsReviewed: 0,
         })
       );
     });
@@ -279,6 +284,7 @@ describe("StreakService", () => {
         totalXP: 0,
         currentStreak: 6,
         longestStreak: 6,
+      totalCardsReviewed: 0,
         lastActivityDate: new Date("2025-11-10"),
         achievements: [],
         createdAt: new Date(),
@@ -293,6 +299,7 @@ describe("StreakService", () => {
           totalXP: 200,
           currentStreak: 7,
           longestStreak: 7,
+      totalCardsReviewed: 0,
           lastActivityDate: new Date(),
           achievements: [],
           createdAt: new Date(),
@@ -326,6 +333,7 @@ describe("StreakService", () => {
         totalXP: 250,
         currentStreak: 29,
         longestStreak: 29,
+      totalCardsReviewed: 0,
         lastActivityDate: new Date("2025-11-10"),
         achievements: [],
         createdAt: new Date(),
@@ -340,6 +348,7 @@ describe("StreakService", () => {
           totalXP: 550,
           currentStreak: 30,
           longestStreak: 30,
+      totalCardsReviewed: 0,
           lastActivityDate: new Date(),
           achievements: [],
           createdAt: new Date(),
@@ -373,6 +382,7 @@ describe("StreakService", () => {
         totalXP: 0,
         currentStreak: 5,
         longestStreak: 5,
+      totalCardsReviewed: 0,
         lastActivityDate: new Date("2025-11-10"),
         achievements: [],
         createdAt: new Date(),
@@ -397,6 +407,7 @@ describe("StreakService", () => {
         totalXP: 200,
         currentStreak: 7,
         longestStreak: 7,
+      totalCardsReviewed: 0,
         lastActivityDate: today, // Já teve atividade hoje
         achievements: [],
         createdAt: new Date(),
@@ -420,6 +431,7 @@ describe("StreakService", () => {
         totalXP: 250,
         currentStreak: 13,
         longestStreak: 13,
+      totalCardsReviewed: 0,
         lastActivityDate: new Date("2025-11-10"),
         achievements: [],
         createdAt: new Date(),
@@ -434,6 +446,7 @@ describe("StreakService", () => {
           totalXP: 450,
           currentStreak: 14,
           longestStreak: 14,
+      totalCardsReviewed: 0,
           lastActivityDate: new Date(),
           achievements: [],
           createdAt: new Date(),
@@ -533,6 +546,7 @@ describe("StreakService", () => {
         totalXP: 0,
         currentStreak: 6,
         longestStreak: 10,
+      totalCardsReviewed: 0,
         lastActivityDate: new Date("2025-11-09"),
         achievements: [],
         createdAt: new Date(),

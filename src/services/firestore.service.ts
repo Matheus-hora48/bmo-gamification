@@ -63,6 +63,7 @@ const DEFAULT_USER_PROGRESS: Omit<UserProgress, "userId"> = {
   totalXP: 0,
   currentStreak: 0,
   longestStreak: 0,
+  totalCardsReviewed: 0,
   lastActivityDate: null,
   achievements: [],
   createdAt: new Date(0),
@@ -490,6 +491,9 @@ export class FirestoreService {
       ),
       longestStreak: Number(
         data.longestStreak ?? DEFAULT_USER_PROGRESS.longestStreak
+      ),
+      totalCardsReviewed: Number(
+        data.totalCardsReviewed ?? DEFAULT_USER_PROGRESS.totalCardsReviewed
       ),
       lastActivityDate: data.lastActivityDate ?? null,
       achievements: Array.isArray(data.achievements)

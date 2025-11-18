@@ -7,6 +7,7 @@ export interface UserProgress {
   totalXP: number;
   currentStreak: number;
   longestStreak: number;
+  totalCardsReviewed: number; // Total de cards revisados em todas as sessões
   lastActivityDate: Date | Timestamp | null;
   achievements: string[];
   createdAt: Date | Timestamp;
@@ -29,6 +30,7 @@ export const isValidUserProgress = (progress: UserProgress): boolean => {
     "totalXP",
     "currentStreak",
     "longestStreak",
+    "totalCardsReviewed",
   ];
 
   for (const field of numericFields) {
@@ -89,6 +91,7 @@ export const UserProgressHelpers = {
       totalXP: Math.max(0, progress.totalXP),
       currentStreak: Math.max(0, Math.floor(progress.currentStreak)),
       longestStreak: Math.max(0, Math.floor(progress.longestStreak)),
+      totalCardsReviewed: Math.max(0, Math.floor(progress.totalCardsReviewed || 0)),
       achievements: [
         ...new Set(
           progress.achievements.map((id) => id.trim()).filter(Boolean)
