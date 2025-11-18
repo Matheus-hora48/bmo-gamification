@@ -24,7 +24,7 @@ export class RankingsController {
    * Busca ranking mensal para um período específico
    * Se date não informado, usa mês atual
    */
-  async getMonthlyRanking(req: Request, res: Response): Promise<void> {
+  getMonthlyRanking = async (req: Request, res: Response): Promise<void> => {
     try {
       const { date } = req.params; // Opcional: '2025-11'
       const { limit } = req.query;
@@ -96,14 +96,14 @@ export class RankingsController {
         code: "INTERNAL_ERROR",
       });
     }
-  }
+  };
 
   /**
    * GET /api/rankings/yearly/:year?
    * Busca ranking anual para um ano específico
    * Se year não informado, usa ano atual
    */
-  async getYearlyRanking(req: Request, res: Response): Promise<void> {
+  getYearlyRanking = async (req: Request, res: Response): Promise<void> => {
     try {
       const { year } = req.params; // Opcional: '2025'
       const { limit } = req.query;
@@ -178,14 +178,14 @@ export class RankingsController {
         code: "INTERNAL_ERROR",
       });
     }
-  }
+  };
 
   /**
    * GET /api/rankings/user/:userId/position/:period
    * Busca posição específica de um usuário
    * Retornar posição específica do usuário
    */
-  async getUserPosition(req: Request, res: Response): Promise<void> {
+  getUserPosition = async (req: Request, res: Response): Promise<void> => {
     try {
       const { userId, period } = req.params;
 
@@ -279,5 +279,5 @@ export class RankingsController {
         code: "INTERNAL_ERROR",
       });
     }
-  }
+  };
 }

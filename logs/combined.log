@@ -180,3 +180,8 @@
 2025-11-12 23:50:37 [debug]: POST /process-review - Iniciando processamento
 2025-11-12 23:50:39 [info]: Revisão de card processada com sucesso
 2025-11-12 23:53:31 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-13 08:41:56 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-18 12:07:56 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-18 14:47:15 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-18 14:50:32 [info]: ⏰ [CRON] Job de atualização de streaks agendado para 00:00 (Brasília)
+2025-11-18 14:50:47 [info]: GET /api/statistics/deck/84/47
