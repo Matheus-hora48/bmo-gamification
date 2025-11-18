@@ -24,60 +24,13 @@ export class StatisticsController {
   // =============================================================================
 
   /**
-   * GET /statistics/deck/:deckId/:userId
-   * Busca estatísticas de um deck específico para um usuário
+   * GET /statistics/deck/:userId/:deckId (deck específico)
+   * GET /statistics/deck/:userId (todos os decks do usuário)
+   * Busca estatísticas de um deck específico ou todos os decks do usuário
    */
   getDeckStatistics = async (req: Request, res: Response): Promise<void> => {
     try {
-      const { deckId, userId } = req.params;
-
-      if (!deckId || !userId) {
-        res.status(400).json({
-          success: false,
-          error: "deckId e userId são obrigatórios",
-          code: "MISSING_PARAMS",
-        });
-        return;
-      }
-
-      const statistics = await this.statisticsService.getDeckStatistics(
-        userId,
-        deckId
-      );
-
-      if (!statistics) {
-        res.status(404).json({
-          success: false,
-          error: "Estatísticas não encontradas",
-          code: "STATS_NOT_FOUND",
-        });
-        return;
-      }
-
-      res.status(200).json({
-        success: true,
-        data: statistics,
-      });
-    } catch (error) {
-      logger.error("Erro ao buscar estatísticas do deck:", error);
-      res.status(500).json({
-        success: false,
-        error: "Erro interno do servidor",
-        code: "INTERNAL_ERROR",
-      });
-    }
-  };
-
-  /**
-   * GET /statistics/deck/:userId/all
-   * Busca estatísticas de todos os decks de um usuário
-   */
-  getAllUserDeckStatistics = async (
-    req: Request,
-    res: Response
-  ): Promise<void> => {
-    try {
-      const { userId } = req.params;
+      const { userId, deckId } = req.params; // ✅ Ordem corrigida: userId primeiro
 
       if (!userId) {
         res.status(400).json({
@@ -88,20 +41,51 @@ export class StatisticsController {
         return;
       }
 
-      // Por enquanto retorna array vazio - implementação futura
-      // TODO: Implementar método getAllUserDeckStatistics no StatisticsService
-      const allStatistics: any[] = [];
+      // Se deckId específico fornecido
+      if (deckId) {
+        const statistics = await this.statisticsService.getDeckStatistics(
+          userId,
+          deckId
+        );
+
+        if (!statistics) {
+          res.status(404).json({
+            success: false,
+            error: "Estatísticas do deck não encontradas",
+            code: "DECK_STATS_NOT_FOUND",
+          });
+          return;
+        }
+
+        res.status(200).json({
+          success: true,
+          data: statistics,
+        });
+        return;
+      }
+
+      // Se deckId omitido, retornar todos os decks do usuário
+      const allDeckStats = await this.statisticsService.getDeckStatistics(
+        userId
+      );
 
       res.status(200).json({
         success: true,
-        data: allStatistics,
+        data: allDeckStats,
       });
+
     } catch (error) {
-      logger.error("Erro ao buscar todas estatísticas de decks:", error);
+      logger.error("Erro ao buscar estatísticas do deck", {
+        error: error instanceof Error ? error.message : error,
+        userId: req.params.userId,
+        deckId: req.params.deckId,
+        path: req.path,
+      });
+
       res.status(500).json({
         success: false,
-        error: "Erro interno do servidor",
-        code: "INTERNAL_ERROR",
+        error: "Erro interno do servidor ao buscar estatísticas do deck",
+        code: "INTERNAL_SERVER_ERROR",
       });
     }
   };
