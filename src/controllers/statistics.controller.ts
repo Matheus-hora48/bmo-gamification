@@ -65,15 +65,13 @@ export class StatisticsController {
       }
 
       // Se deckId omitido, retornar todos os decks do usuário
-      const allDeckStats = await this.statisticsService.getDeckStatistics(
-        userId
-      );
+      const allDeckStats =
+        await this.statisticsService.getDeckStatistics(userId);
 
       res.status(200).json({
         success: true,
         data: allDeckStats,
       });
-
     } catch (error) {
       logger.error("Erro ao buscar estatísticas do deck", {
         error: error instanceof Error ? error.message : error,
