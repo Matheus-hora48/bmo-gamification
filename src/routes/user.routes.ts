@@ -59,4 +59,38 @@ router.post("/clear_all_notifications", controller.clearAllNotifications);
  */
 router.post("/test_notification", controller.sendTestNotification);
 
+/**
+ * @swagger
+ * /api/user/broadcast:
+ *   post:
+ *     summary: Enviar notificação para todos os usuários
+ *     description: Envia uma notificação push para todos os usuários que possuem token FCM cadastrado.
+ *     tags: [User]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - title
+ *               - body
+ *               - pushType
+ *             properties:
+ *               title:
+ *                 type: string
+ *               body:
+ *                 type: string
+ *               pushType:
+ *                 type: number
+ *                 description: Código do tipo de notificação (ex: 30 para Estudos, 5 para News)
+ *               additionalData:
+ *                 type: object
+ *                 description: Dados extras opcionais
+ *     responses:
+ *       200:
+ *         description: Broadcast enviado com sucesso
+ */
+router.post("/broadcast", controller.sendBroadcast);
+
 export default router;
