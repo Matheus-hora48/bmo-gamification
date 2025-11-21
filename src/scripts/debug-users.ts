@@ -21,12 +21,12 @@ async function debugUsers() {
     // 2. Listar os primeiros 5 usuários da coleção para ver a estrutura
     console.log("\n--- Listando amostra da coleção 'users' ---");
     const snapshot = await firestoreCollections.users().limit(5).get();
-    
+
     if (snapshot.empty) {
       console.log("⚠️ A coleção 'users' está vazia ou inacessível.");
     } else {
       console.log(`Encontrados ${snapshot.size} documentos.`);
-      snapshot.forEach(doc => {
+      snapshot.forEach((doc) => {
         console.log(`\nID: ${doc.id}`);
         const data = doc.data();
         // Mostrar apenas chaves ou dados relevantes para não poluir
@@ -38,7 +38,6 @@ async function debugUsers() {
         }
       });
     }
-
   } catch (error) {
     console.error("❌ Erro ao acessar Firestore:", error);
   }
