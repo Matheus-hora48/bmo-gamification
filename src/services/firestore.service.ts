@@ -50,7 +50,10 @@ export type DailyProgressUpdate = Partial<
 >;
 
 export type UserAchievementProgressUpdate = Partial<
-  Pick<UserAchievementProgress, "progress" | "claimed" | "unlockedAt">
+  Pick<
+    UserAchievementProgress,
+    "progress" | "claimed" | "unlockedAt" | "notificationSeen"
+  >
 >;
 
 export type StreakUpdate = Partial<
@@ -273,6 +276,7 @@ export class FirestoreService {
       progress: 100,
       claimed: false,
       unlockedAt,
+      notificationSeen: false,
       updatedAt: this.fieldValue.serverTimestamp(),
     });
 
@@ -282,6 +286,28 @@ export class FirestoreService {
       ...data,
       ...payload,
     });
+  }
+
+  async markAllAchievementsAsSeen(userId: string): Promise<void> {
+    const userAchievementsRef = this.collections.userAchievementEntries(userId);
+    const snapshot = await userAchievementsRef
+      .where("unlockedAt", "!=", null)
+      .where("notificationSeen", "==", false)
+      .get();
+
+    if (snapshot.empty) {
+      return;
+    }
+
+    const batch = admin.firestore().batch();
+    snapshot.docs.forEach((doc) => {
+      batch.update(doc.ref, {
+        notificationSeen: true,
+        updatedAt: this.fieldValue.serverTimestamp(),
+      });
+    });
+
+    await batch.commit();
   }
 
   async updateAchievementProgress(
@@ -480,6 +506,42 @@ export class FirestoreService {
     }
   }
 
+  async getUserFcmToken(userId: string): Promise<string | null> {
+    try {
+      const snapshot = await this.collections.userDoc(userId).get();
+      if (!snapshot.exists) {
+        return null;
+      }
+      const data = snapshot.data();
+      return data?.fcmToken || null;
+    } catch (error) {
+      console.error(`Erro ao buscar FCM token para usuário ${userId}:`, error);
+      return null;
+    }
+  }
+
+  async getAllFcmTokens(): Promise<string[]> {
+    try {
+      const snapshot = await this.collections
+        .users()
+        .where("fcmToken", "!=", null)
+        .get();
+
+      const tokens: string[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.fcmToken && typeof data.fcmToken === "string") {
+          tokens.push(data.fcmToken);
+        }
+      });
+
+      return tokens;
+    } catch (error) {
+      console.error("Erro ao buscar todos os tokens FCM:", error);
+      return [];
+    }
+  }
+
   private mapUserProgress(userId: string, data: DocumentData): UserProgress {
     const progress: UserProgress = {
       userId,
@@ -592,6 +654,7 @@ export class FirestoreService {
       unlockedAt: data.unlockedAt ?? null,
       progress: Number(data.progress ?? 0),
       claimed: Boolean(data.claimed ?? false),
+      notificationSeen: Boolean(data.notificationSeen ?? false),
       updatedAt: data.updatedAt ?? null,
     };
 
