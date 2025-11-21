@@ -6,6 +6,10 @@ import { FirestoreService } from "../services/firestore.service";
 import { LevelService } from "../services/level.service";
 import { StreakService } from "../services/streak.service";
 import { XPService } from "../services/xp.service";
+import {
+  NotificationService,
+  PushType,
+} from "../services/notification.service";
 import { logger } from "../utils/logger";
 import {
   CardCreatedSchema,
@@ -32,6 +36,7 @@ export class GamificationController {
   private readonly dailyGoalService: DailyGoalService;
   private readonly levelService: LevelService;
   private readonly streakService: StreakService;
+  private readonly notificationService: NotificationService;
 
   constructor() {
     this.firestoreService = new FirestoreService();
@@ -40,6 +45,7 @@ export class GamificationController {
     this.dailyGoalService = new DailyGoalService();
     this.levelService = new LevelService();
     this.streakService = new StreakService();
+    this.notificationService = new NotificationService();
   }
 
   /**
@@ -657,6 +663,148 @@ export class GamificationController {
       res.status(500).json({
         error: "Erro ao verificar conquistas",
         details: error instanceof Error ? error.message : "Erro desconhecido",
+      });
+    }
+  };
+
+  /**
+   * POST /user/clear_all_notifications
+   * Limpar todas as notificações de conquistas
+   */
+  clearAllNotifications = async (
+    req: Request,
+    res: Response
+  ): Promise<void> => {
+    try {
+      const { user_id } = req.body;
+
+      if (!user_id) {
+        res.status(400).json({ error: "user_id é obrigatório" });
+        return;
+      }
+
+      await this.achievementService.markAllAsSeen(String(user_id));
+
+      logger.info("Notificações limpas com sucesso", { userId: user_id });
+
+      res.status(200).json({
+        status: 200,
+        message: "All notifications cleared successfully.",
+      });
+    } catch (error) {
+      logger.error("Erro ao limpar notificações", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        error: "Erro ao limpar notificações",
+      });
+    }
+  };
+
+  /**
+   * POST /user/test_notification
+   * Enviar notificação de teste (Estudos)
+   */
+  sendTestNotification = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { user_id } = req.body;
+
+      if (!user_id) {
+        res.status(400).json({ error: "user_id é obrigatório" });
+        return;
+      }
+
+      const fcmToken = await this.firestoreService.getUserFcmToken(
+        String(user_id)
+      );
+
+      if (!fcmToken) {
+        res
+          .status(404)
+          .json({ error: "Token FCM não encontrado para o usuário" });
+        return;
+      }
+
+      await this.notificationService.sendPushNotification(fcmToken, {
+        title: "Hora de Estudar! 📚",
+        body: "Mantenha seu ritmo! Revise seus cards hoje.",
+        pushType: PushType.STUDY_REMINDER,
+        additionalData: {
+          type: "study_reminder",
+        },
+      });
+
+      logger.info("Notificação de teste enviada", { userId: user_id });
+
+      res.status(200).json({
+        status: 200,
+        message: "Test notification sent successfully.",
+      });
+    } catch (error) {
+      logger.error("Erro ao enviar notificação de teste", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        error: "Erro ao enviar notificação de teste",
+      });
+    }
+  };
+
+  /**
+   * POST /user/broadcast
+   * Enviar notificação para todos os usuários
+   */
+  sendBroadcast = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const { title, body, pushType, additionalData } = req.body;
+
+      if (!title || !body || !pushType) {
+        res.status(400).json({
+          error: "Campos obrigatórios: title, body, pushType",
+        });
+        return;
+      }
+
+      const tokens = await this.firestoreService.getAllFcmTokens();
+
+      if (tokens.length === 0) {
+        res.status(200).json({
+          message: "Nenhum usuário com token FCM encontrado.",
+          stats: { success: 0, failure: 0 },
+        });
+        return;
+      }
+
+      const result = await this.notificationService.sendBroadcastNotification(
+        tokens,
+        {
+          title,
+          body,
+          pushType: Number(pushType),
+          additionalData: additionalData || {},
+        }
+      );
+
+      logger.info("Broadcast enviado", {
+        title,
+        pushType,
+        stats: result,
+      });
+
+      res.status(200).json({
+        message: "Broadcast processado.",
+        stats: {
+          success: result.successCount,
+          failure: result.failureCount,
+          totalTokens: tokens.length,
+        },
+      });
+    } catch (error) {
+      logger.error("Erro ao enviar broadcast", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        error: "Erro ao enviar broadcast",
       });
     }
   };
