@@ -5,11 +5,13 @@ import type { UserProgress } from "../models/UserProgress";
 import { XPSource } from "../models/XPTransaction";
 import { FirestoreService } from "./firestore.service";
 import { XPService } from "./xp.service";
+import { NotificationService, PushType } from "./notification.service";
 
 export class AchievementService {
   constructor(
     private readonly firestore: FirestoreService = new FirestoreService(),
-    private readonly xpService: XPService = new XPService()
+    private readonly xpService: XPService = new XPService(),
+    private readonly notificationService: NotificationService = new NotificationService()
   ) {}
 
   /**
@@ -173,6 +175,36 @@ export class AchievementService {
     console.log(
       `✅ Conquista "${achievement.name}" desbloqueada para usuário ${userId}! (+${achievement.xpReward} XP)`
     );
+
+    // Enviar notificação push em background (não bloqueia o retorno)
+    this.sendAchievementNotification(userId, achievement).catch((err) => {
+      console.error(
+        `Falha ao enviar notificação de conquista para ${userId}:`,
+        err
+      );
+    });
+  }
+
+  /**
+   * Envia notificação push de conquista desbloqueada
+   */
+  private async sendAchievementNotification(
+    userId: string,
+    achievement: Achievement
+  ): Promise<void> {
+    const fcmToken = await this.firestore.getUserFcmToken(userId);
+
+    if (fcmToken) {
+      await this.notificationService.sendPushNotification(fcmToken, {
+        title: "Conquista Desbloqueada!",
+        body: `Você desbloqueou: ${achievement.name}`,
+        pushType: PushType.ACHIEVEMENT,
+        additionalData: {
+          achievementId: achievement.id,
+          xpReward: String(achievement.xpReward),
+        },
+      });
+    }
   }
 
   /**
@@ -207,6 +239,14 @@ export class AchievementService {
       );
       return 0;
     }
+  }
+
+  /**
+   * Marca todas as conquistas desbloqueadas como vistas (notificação limpa)
+   * @param userId - ID do usuário
+   */
+  async markAllAsSeen(userId: string): Promise<void> {
+    await this.firestore.markAllAchievementsAsSeen(userId);
   }
 
   // ==========================================
