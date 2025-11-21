@@ -6,6 +6,7 @@ export interface UserAchievementProgress {
   unlockedAt: Date | Timestamp | null;
   progress: number;
   claimed: boolean;
+  notificationSeen?: boolean;
   updatedAt: Date | Timestamp | null;
 }
 
@@ -20,6 +21,13 @@ export const isValidUserAchievementProgress = (
     return false;
   }
 
+  if (
+    progress.notificationSeen !== undefined &&
+    typeof progress.notificationSeen !== "boolean"
+  ) {
+    return false;
+  }
+
   return typeof progress.claimed === "boolean";
 };
 
@@ -30,4 +38,5 @@ export const normalizeUserAchievementProgress = (
   userId: progress.userId.trim(),
   achievementId: progress.achievementId.trim(),
   progress: Math.max(0, progress.progress),
+  notificationSeen: progress.notificationSeen ?? false,
 });
