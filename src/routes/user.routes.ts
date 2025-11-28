@@ -58,7 +58,6 @@ router.post("/clear_all_notifications", controller.clearAllNotifications);
  *         description: Token FCM não encontrado
  */
 router.post("/test_notification", controller.sendTestNotification);
-
 /**
  * @swagger
  * /api/user/broadcast:
