@@ -268,39 +268,45 @@ export class FirestoreService {
       achievementId
     );
 
-    const result = await admin.firestore().runTransaction(async (transaction) => {
-      const snapshot = await transaction.get(entryRef);
-      const data = snapshot.data() ?? {};
+    const result = await admin
+      .firestore()
+      .runTransaction(async (transaction) => {
+        const snapshot = await transaction.get(entryRef);
+        const data = snapshot.data() ?? {};
 
-      // Se já está desbloqueada, não fazer nada (evita race condition)
-      if (snapshot.exists && data.unlockedAt !== null && data.unlockedAt !== undefined) {
+        // Se já está desbloqueada, não fazer nada (evita race condition)
+        if (
+          snapshot.exists &&
+          data.unlockedAt !== null &&
+          data.unlockedAt !== undefined
+        ) {
+          return {
+            progress: this.mapUserAchievement(userId, achievementId, data),
+            isNewUnlock: false,
+          };
+        }
+
+        // Novo desbloqueio
+        const payload = this.removeUndefined({
+          userId,
+          achievementId,
+          progress: 100,
+          claimed: false,
+          unlockedAt: this.fieldValue.serverTimestamp(),
+          notificationSeen: false,
+          updatedAt: this.fieldValue.serverTimestamp(),
+        });
+
+        transaction.set(entryRef, payload, { merge: true });
+
         return {
-          progress: this.mapUserAchievement(userId, achievementId, data),
-          isNewUnlock: false,
+          progress: this.mapUserAchievement(userId, achievementId, {
+            ...data,
+            ...payload,
+          }),
+          isNewUnlock: true,
         };
-      }
-
-      // Novo desbloqueio
-      const payload = this.removeUndefined({
-        userId,
-        achievementId,
-        progress: 100,
-        claimed: false,
-        unlockedAt: this.fieldValue.serverTimestamp(),
-        notificationSeen: false,
-        updatedAt: this.fieldValue.serverTimestamp(),
       });
-
-      transaction.set(entryRef, payload, { merge: true });
-
-      return {
-        progress: this.mapUserAchievement(userId, achievementId, {
-          ...data,
-          ...payload,
-        }),
-        isNewUnlock: true,
-      };
-    });
 
     return result;
   }
