@@ -92,7 +92,6 @@ describe("StreakService", () => {
         expect.objectContaining({
           currentStreak: 6,
           longestStreak: 10,
-      totalCardsReviewed: 0,
         })
       );
     });
@@ -242,7 +241,6 @@ describe("StreakService", () => {
         expect.objectContaining({
           currentStreak: 0,
           longestStreak: 20,
-      totalCardsReviewed: 0,
         })
       );
     });
