@@ -85,7 +85,7 @@ describe("AchievementService", () => {
         }
       );
       vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue(
-        {} as UserAchievementProgress
+        { progress: {} as UserAchievementProgress, isNewUnlock: true }
       );
       vi.spyOn(mockXPService, "addXP").mockResolvedValue({
         userProgress: {} as UserProgress,
@@ -135,7 +135,7 @@ describe("AchievementService", () => {
         streakAchievement
       );
       vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue(
-        {} as UserAchievementProgress
+        { progress: {} as UserAchievementProgress, isNewUnlock: true }
       );
       vi.spyOn(mockXPService, "addXP").mockResolvedValue({
         userProgress: {} as UserProgress,
@@ -349,7 +349,7 @@ describe("AchievementService", () => {
         null
       );
       vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue(
-        {} as UserAchievementProgress
+        { progress: {} as UserAchievementProgress, isNewUnlock: true }
       );
       vi.spyOn(mockXPService, "addXP").mockResolvedValue({
         userProgress: {} as UserProgress,
@@ -383,18 +383,18 @@ describe("AchievementService", () => {
       );
 
       vi.spyOn(mockFirestore, "getAchievement").mockResolvedValue(achievement);
-      vi.spyOn(mockFirestore, "getUserAchievementProgress").mockResolvedValue({
-        userId: mockUserId,
-        achievementId: "cards_10",
-        unlockedAt: new Date(),
-        progress: 100,
-        claimed: true,
-        updatedAt: new Date(),
-      });
+      vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue(
+        { progress: {} as UserAchievementProgress, isNewUnlock: false }
+      );
 
       await service.unlockAchievement(mockUserId, "cards_10");
 
-      expect(mockFirestore.unlockAchievement).not.toHaveBeenCalled();
+      // Com a nova lógica, unlockAchievement é sempre chamado (transação atômica)
+      // mas addXP não deve ser chamado se isNewUnlock = false
+      expect(mockFirestore.unlockAchievement).toHaveBeenCalledWith(
+        mockUserId,
+        "cards_10"
+      );
       expect(mockXPService.addXP).not.toHaveBeenCalled();
     });
 

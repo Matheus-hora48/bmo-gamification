@@ -128,21 +128,20 @@ export class AchievementService {
       throw new Error(`Conquista "${achievementId}" não encontrada.`);
     }
 
-    // Verificar se já está desbloqueada
-    const existingProgress = await this.firestore.getUserAchievementProgress(
+    // Desbloquear a conquista usando transação atômica
+    // Isso evita race conditions e duplicação de notificações
+    const { isNewUnlock } = await this.firestore.unlockAchievement(
       userId,
       achievementId
     );
 
-    if (existingProgress && existingProgress.unlockedAt !== null) {
+    // Se não foi um novo desbloqueio, não processar XP nem notificação
+    if (!isNewUnlock) {
       console.warn(
-        `Conquista ${achievementId} já desbloqueada para usuário ${userId}`
+        `Conquista ${achievementId} já desbloqueada para usuário ${userId} - ignorando duplicata`
       );
       return;
     }
-
-    // Desbloquear a conquista
-    await this.firestore.unlockAchievement(userId, achievementId);
 
     // Conceder XP da conquista
     await this.xpService.addXP(
