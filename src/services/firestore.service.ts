@@ -255,37 +255,54 @@ export class FirestoreService {
     );
   }
 
+  /**
+   * Desbloqueia uma conquista de forma atômica usando transação.
+   * Retorna o progresso atualizado e um flag indicando se foi um novo desbloqueio.
+   */
   async unlockAchievement(
     userId: string,
     achievementId: string
-  ): Promise<UserAchievementProgress> {
+  ): Promise<{ progress: UserAchievementProgress; isNewUnlock: boolean }> {
     const entryRef = this.collections.userAchievementEntry(
       userId,
       achievementId
     );
-    const snapshot = await entryRef.get();
 
-    const data = snapshot.data() ?? {};
-    const unlockedAt = snapshot.exists
-      ? (data.unlockedAt ?? this.fieldValue.serverTimestamp())
-      : this.fieldValue.serverTimestamp();
+    const result = await admin.firestore().runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(entryRef);
+      const data = snapshot.data() ?? {};
 
-    const payload = this.removeUndefined({
-      userId,
-      achievementId,
-      progress: 100,
-      claimed: false,
-      unlockedAt,
-      notificationSeen: false,
-      updatedAt: this.fieldValue.serverTimestamp(),
+      // Se já está desbloqueada, não fazer nada (evita race condition)
+      if (snapshot.exists && data.unlockedAt !== null && data.unlockedAt !== undefined) {
+        return {
+          progress: this.mapUserAchievement(userId, achievementId, data),
+          isNewUnlock: false,
+        };
+      }
+
+      // Novo desbloqueio
+      const payload = this.removeUndefined({
+        userId,
+        achievementId,
+        progress: 100,
+        claimed: false,
+        unlockedAt: this.fieldValue.serverTimestamp(),
+        notificationSeen: false,
+        updatedAt: this.fieldValue.serverTimestamp(),
+      });
+
+      transaction.set(entryRef, payload, { merge: true });
+
+      return {
+        progress: this.mapUserAchievement(userId, achievementId, {
+          ...data,
+          ...payload,
+        }),
+        isNewUnlock: true,
+      };
     });
 
-    await entryRef.set(payload, { merge: true });
-
-    return this.mapUserAchievement(userId, achievementId, {
-      ...data,
-      ...payload,
-    });
+    return result;
   }
 
   async markAllAchievementsAsSeen(userId: string): Promise<void> {
