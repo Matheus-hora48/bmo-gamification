@@ -84,9 +84,10 @@ describe("AchievementService", () => {
           return achievement2;
         }
       );
-      vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue(
-        { progress: {} as UserAchievementProgress, isNewUnlock: true }
-      );
+      vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue({
+        progress: {} as UserAchievementProgress,
+        isNewUnlock: true,
+      });
       vi.spyOn(mockXPService, "addXP").mockResolvedValue({
         userProgress: {} as UserProgress,
         levelUpInfo: {
@@ -134,9 +135,10 @@ describe("AchievementService", () => {
       vi.spyOn(mockFirestore, "getAchievement").mockResolvedValue(
         streakAchievement
       );
-      vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue(
-        { progress: {} as UserAchievementProgress, isNewUnlock: true }
-      );
+      vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue({
+        progress: {} as UserAchievementProgress,
+        isNewUnlock: true,
+      });
       vi.spyOn(mockXPService, "addXP").mockResolvedValue({
         userProgress: {} as UserProgress,
         levelUpInfo: {
@@ -286,7 +288,7 @@ describe("AchievementService", () => {
         totalXP: 1500,
         currentStreak: 0,
         longestStreak: 0,
-      totalCardsReviewed: 0,
+        totalCardsReviewed: 0,
         lastActivityDate: null,
         achievements: [],
         createdAt: new Date(),
@@ -311,7 +313,7 @@ describe("AchievementService", () => {
         totalXP: 1500,
         currentStreak: 0,
         longestStreak: 0,
-      totalCardsReviewed: 0,
+        totalCardsReviewed: 0,
         lastActivityDate: null,
         achievements: [],
         createdAt: new Date(),
@@ -348,9 +350,10 @@ describe("AchievementService", () => {
       vi.spyOn(mockFirestore, "getUserAchievementProgress").mockResolvedValue(
         null
       );
-      vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue(
-        { progress: {} as UserAchievementProgress, isNewUnlock: true }
-      );
+      vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue({
+        progress: {} as UserAchievementProgress,
+        isNewUnlock: true,
+      });
       vi.spyOn(mockXPService, "addXP").mockResolvedValue({
         userProgress: {} as UserProgress,
         levelUpInfo: {
@@ -383,9 +386,10 @@ describe("AchievementService", () => {
       );
 
       vi.spyOn(mockFirestore, "getAchievement").mockResolvedValue(achievement);
-      vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue(
-        { progress: {} as UserAchievementProgress, isNewUnlock: false }
-      );
+      vi.spyOn(mockFirestore, "unlockAchievement").mockResolvedValue({
+        progress: {} as UserAchievementProgress,
+        isNewUnlock: false,
+      });
 
       await service.unlockAchievement(mockUserId, "cards_10");
 
@@ -532,7 +536,7 @@ describe("AchievementService", () => {
         totalXP: 2500,
         currentStreak: 0,
         longestStreak: 0,
-      totalCardsReviewed: 0,
+        totalCardsReviewed: 0,
         lastActivityDate: null,
         achievements: [],
         createdAt: new Date(),
@@ -551,7 +555,7 @@ describe("AchievementService", () => {
         totalXP: 2500,
         currentStreak: 0,
         longestStreak: 0,
-      totalCardsReviewed: 0,
+        totalCardsReviewed: 0,
         lastActivityDate: null,
         achievements: [],
         createdAt: new Date(),
