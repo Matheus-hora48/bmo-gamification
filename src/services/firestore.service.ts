@@ -616,6 +616,40 @@ export class FirestoreService {
   }
 
   /**
+   * Registra um deck estudado em um dia específico (para conquista Multi-tarefa)
+   */
+  async addDeckStudiedToday(userId: string, deckId: string): Promise<void> {
+    const today: string = new Date().toISOString().split("T")[0] as string;
+    const metrics = await this.getUserMetrics(userId);
+
+    // Atualiza o registro de decks estudados por dia
+    const decksStudiedPerDay: Record<string, string[]> =
+      metrics.decksStudiedPerDay || {};
+    const todayDecks: string[] = decksStudiedPerDay[today] || [];
+
+    if (!todayDecks.includes(deckId)) {
+      todayDecks.push(deckId);
+      decksStudiedPerDay[today] = todayDecks;
+
+      // Calcula o novo máximo de decks estudados no mesmo dia
+      const newMax = Math.max(
+        metrics.maxDecksStudiedSameDay || 0,
+        todayDecks.length
+      );
+
+      await this.collections.userMetricsDoc(userId).set(
+        {
+          userId,
+          decksStudiedPerDay,
+          maxDecksStudiedSameDay: newMax,
+          updatedAt: this.fieldValue.serverTimestamp(),
+        },
+        { merge: true }
+      );
+    }
+  }
+
+  /**
    * Adiciona um nível de dificuldade usado às métricas do usuário
    */
   async addDifficultyLevelUsed(
@@ -913,6 +947,12 @@ export class FirestoreService {
         typeof data.cardsPerDay === "object" && data.cardsPerDay !== null
           ? data.cardsPerDay
           : {},
+      decksStudiedPerDay:
+        typeof data.decksStudiedPerDay === "object" &&
+        data.decksStudiedPerDay !== null
+          ? data.decksStudiedPerDay
+          : {},
+      maxDecksStudiedSameDay: Number(data.maxDecksStudiedSameDay ?? 0),
       updatedAt: data.updatedAt,
     };
   }
