@@ -565,6 +565,358 @@ export class FirestoreService {
     }
   }
 
+  // =============================================================================
+  // USER METRICS METHODS (para conquistas customizadas)
+  // =============================================================================
+
+  /**
+   * Obtém as métricas customizadas de um usuário
+   */
+  async getUserMetrics(userId: string): Promise<UserMetrics> {
+    const snapshot = await this.collections.userMetricsDoc(userId).get();
+
+    if (!snapshot.exists) {
+      // Retorna métricas padrão se não existir
+      return this.getDefaultUserMetrics(userId);
+    }
+
+    const data = snapshot.data() ?? {};
+    return this.mapUserMetrics(userId, data);
+  }
+
+  /**
+   * Atualiza as métricas customizadas de um usuário
+   */
+  async updateUserMetrics(
+    userId: string,
+    update: Partial<Omit<UserMetrics, "userId">>
+  ): Promise<UserMetrics> {
+    const payload = this.removeUndefined({
+      userId,
+      ...update,
+      updatedAt: this.fieldValue.serverTimestamp(),
+    });
+
+    await this.collections.userMetricsDoc(userId).set(payload, { merge: true });
+    return this.getUserMetrics(userId);
+  }
+
+  /**
+   * Adiciona um deck estudado às métricas do usuário
+   */
+  async addStudiedDeck(userId: string, deckId: string): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        uniqueDecksStudied: this.fieldValue.arrayUnion(deckId),
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Adiciona um nível de dificuldade usado às métricas do usuário
+   */
+  async addDifficultyLevelUsed(
+    userId: string,
+    difficulty: string
+  ): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        difficultyLevelsUsed: this.fieldValue.arrayUnion(difficulty),
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Adiciona um deck do marketplace às métricas do usuário
+   */
+  async addMarketplaceDeck(userId: string, deckId: string): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        marketplaceDecksAdded: this.fieldValue.arrayUnion(deckId),
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Marca o perfil como completo nas métricas do usuário
+   */
+  async setProfileCompleted(userId: string, completed: boolean): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        profileCompleted: completed,
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Registra uma sessão de estudo com horário
+   */
+  async recordStudySessionTime(
+    userId: string,
+    date: string,
+    hour: number
+  ): Promise<void> {
+    const updates: Record<string, unknown> = {
+      userId,
+      updatedAt: this.fieldValue.serverTimestamp(),
+    };
+
+    if (hour < 8) {
+      updates.studySessionsBeforeHour = this.fieldValue.arrayUnion(date);
+    }
+
+    if (hour >= 22) {
+      updates.studySessionsAfterHour = this.fieldValue.arrayUnion(date);
+    }
+
+    await this.collections.userMetricsDoc(userId).set(updates, { merge: true });
+  }
+
+  /**
+   * Atualiza o contador de cards em um dia específico
+   */
+  async updateCardsPerDay(
+    userId: string,
+    date: string,
+    count: number
+  ): Promise<void> {
+    const metrics = await this.getUserMetrics(userId);
+    const cardsPerDay = metrics.cardsPerDay || {};
+    cardsPerDay[date] = count;
+
+    // Atualiza o máximo de cards em um único dia
+    const maxCardsInSingleDay = Math.max(
+      metrics.maxCardsInSingleDay || 0,
+      count
+    );
+
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        cardsPerDay,
+        maxCardsInSingleDay,
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Adiciona um deck compartilhado às métricas do usuário
+   */
+  async addSharedDeck(userId: string, deckId: string): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        decksShared: this.fieldValue.arrayUnion(deckId),
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Incrementa o contador de avaliações de decks
+   */
+  async incrementDeckReviews(userId: string): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        deckReviewsSubmitted: this.fieldValue.increment(1),
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Atualiza os decks ativos do usuário
+   */
+  async setActiveDecks(userId: string, deckIds: string[]): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        activeDecks: deckIds,
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Adiciona um deck ativo
+   */
+  async addActiveDeck(userId: string, deckId: string): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        activeDecks: this.fieldValue.arrayUnion(deckId),
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Remove um deck ativo
+   */
+  async removeActiveDeck(userId: string, deckId: string): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        activeDecks: this.fieldValue.arrayRemove(deckId),
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Atualiza o streak de cards "fácil" consecutivos
+   */
+  async updateEasyCardsStreak(
+    userId: string,
+    currentStreak: number
+  ): Promise<void> {
+    const metrics = await this.getUserMetrics(userId);
+    const maxEasyCardsStreak = Math.max(
+      metrics.maxEasyCardsStreak || 0,
+      currentStreak
+    );
+
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        easyCardsStreak: currentStreak,
+        maxEasyCardsStreak,
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Incrementa o contador de cards "difícil" completados
+   */
+  async incrementHardCardsCompleted(userId: string): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        hardCardsCompleted: this.fieldValue.increment(1),
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Incrementa o contador de cards "expert" completados
+   */
+  async incrementExpertCardsCompleted(userId: string): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        expertCardsCompleted: this.fieldValue.increment(1),
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Adiciona um deck completado às métricas do usuário
+   */
+  async addCompletedDeck(userId: string, deckId: string): Promise<void> {
+    await this.collections.userMetricsDoc(userId).set(
+      {
+        userId,
+        decksCompleted: this.fieldValue.arrayUnion(deckId),
+        updatedAt: this.fieldValue.serverTimestamp(),
+      },
+      { merge: true }
+    );
+  }
+
+  /**
+   * Retorna métricas padrão para um novo usuário
+   */
+  private getDefaultUserMetrics(userId: string): UserMetrics {
+    return {
+      userId,
+      uniqueDecksStudied: [],
+      difficultyLevelsUsed: [],
+      marketplaceDecksAdded: [],
+      profileCompleted: false,
+      maxCardsInSingleDay: 0,
+      studySessionsBeforeHour: [],
+      studySessionsAfterHour: [],
+      decksShared: [],
+      deckReviewsSubmitted: 0,
+      activeDecks: [],
+      easyCardsStreak: 0,
+      maxEasyCardsStreak: 0,
+      hardCardsCompleted: 0,
+      expertCardsCompleted: 0,
+      decksCompleted: [],
+      cardsPerDay: {},
+      decksStudiedPerDay: {},
+      maxDecksStudiedSameDay: 0,
+    };
+  }
+
+  /**
+   * Mapeia os dados do Firestore para UserMetrics
+   */
+  private mapUserMetrics(userId: string, data: DocumentData): UserMetrics {
+    return {
+      userId,
+      uniqueDecksStudied: Array.isArray(data.uniqueDecksStudied)
+        ? data.uniqueDecksStudied
+        : [],
+      difficultyLevelsUsed: Array.isArray(data.difficultyLevelsUsed)
+        ? data.difficultyLevelsUsed
+        : [],
+      marketplaceDecksAdded: Array.isArray(data.marketplaceDecksAdded)
+        ? data.marketplaceDecksAdded
+        : [],
+      profileCompleted: Boolean(data.profileCompleted),
+      maxCardsInSingleDay: Number(data.maxCardsInSingleDay ?? 0),
+      studySessionsBeforeHour: Array.isArray(data.studySessionsBeforeHour)
+        ? data.studySessionsBeforeHour
+        : [],
+      studySessionsAfterHour: Array.isArray(data.studySessionsAfterHour)
+        ? data.studySessionsAfterHour
+        : [],
+      decksShared: Array.isArray(data.decksShared) ? data.decksShared : [],
+      deckReviewsSubmitted: Number(data.deckReviewsSubmitted ?? 0),
+      activeDecks: Array.isArray(data.activeDecks) ? data.activeDecks : [],
+      easyCardsStreak: Number(data.easyCardsStreak ?? 0),
+      maxEasyCardsStreak: Number(data.maxEasyCardsStreak ?? 0),
+      hardCardsCompleted: Number(data.hardCardsCompleted ?? 0),
+      expertCardsCompleted: Number(data.expertCardsCompleted ?? 0),
+      decksCompleted: Array.isArray(data.decksCompleted)
+        ? data.decksCompleted
+        : [],
+      cardsPerDay:
+        typeof data.cardsPerDay === "object" && data.cardsPerDay !== null
+          ? data.cardsPerDay
+          : {},
+      updatedAt: data.updatedAt,
+    };
+  }
+
   private mapUserProgress(userId: string, data: DocumentData): UserProgress {
     const progress: UserProgress = {
       userId,
@@ -744,3 +1096,49 @@ export class FirestoreService {
 }
 
 export const firestoreService = new FirestoreService();
+
+/**
+ * Interface para as métricas customizadas de um usuário
+ * Usada para rastrear conquistas do tipo CUSTOM
+ */
+export interface UserMetrics {
+  userId: string;
+  // Decks únicos estudados (IDs dos decks)
+  uniqueDecksStudied: string[];
+  // Níveis de dificuldade usados (again, hard, good, easy)
+  difficultyLevelsUsed: string[];
+  // Decks adicionados do marketplace (IDs dos decks)
+  marketplaceDecksAdded: string[];
+  // Perfil completado (true/false)
+  profileCompleted: boolean;
+  // Máximo de cards revisados em um único dia
+  maxCardsInSingleDay: number;
+  // Sessões de estudo antes das 8h (datas YYYY-MM-DD)
+  studySessionsBeforeHour: string[];
+  // Sessões de estudo depois das 22h (datas YYYY-MM-DD)
+  studySessionsAfterHour: string[];
+  // Decks compartilhados (IDs dos decks)
+  decksShared: string[];
+  // Avaliações de decks submetidas
+  deckReviewsSubmitted: number;
+  // Decks ativos na biblioteca (IDs dos decks)
+  activeDecks: string[];
+  // Cards "fácil" consecutivos (streak atual)
+  easyCardsStreak: number;
+  // Máximo de cards "fácil" consecutivos
+  maxEasyCardsStreak: number;
+  // Cards "difícil" completados
+  hardCardsCompleted: number;
+  // Cards "expert" completados
+  expertCardsCompleted: number;
+  // Decks completados 100% (IDs dos decks)
+  decksCompleted: string[];
+  // Histórico de cards por dia { "YYYY-MM-DD": count }
+  cardsPerDay: Record<string, number>;
+  // Histórico de decks estudados por dia { "YYYY-MM-DD": ["deckId1", "deckId2"] }
+  decksStudiedPerDay: Record<string, string[]>;
+  // Máximo de decks estudados no mesmo dia
+  maxDecksStudiedSameDay: number;
+  // Última atualização
+  updatedAt?: Date | FirebaseFirestore.Timestamp;
+}
