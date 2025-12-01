@@ -3,7 +3,7 @@ import { XP_VALUES } from "../config/constants";
 import { AchievementType, type Achievement } from "../models/Achievement";
 import type { UserProgress } from "../models/UserProgress";
 import { XPSource } from "../models/XPTransaction";
-import { FirestoreService } from "./firestore.service";
+import { FirestoreService, type UserMetrics } from "./firestore.service";
 import { XPService } from "./xp.service";
 import { NotificationService, PushType } from "./notification.service";
 
@@ -96,6 +96,9 @@ export class AchievementService {
 
         case AchievementType.LEVEL_REACHED:
           return await this.checkLevelReached(userId, target);
+
+        case AchievementType.CUSTOM:
+          return await this.checkCustomAchievement(userId, achievement);
 
         default:
           console.warn(
@@ -225,7 +228,13 @@ export class AchievementService {
     const { type, target } = achievement.condition;
 
     try {
-      const currentValue = await this.getCurrentProgressValue(userId, type);
+      let currentValue: number;
+
+      if (type === AchievementType.CUSTOM) {
+        currentValue = await this.getCustomProgressValue(userId, achievement);
+      } else {
+        currentValue = await this.getCurrentProgressValue(userId, type);
+      }
 
       // Calcular porcentagem de progresso (0-100)
       const progressPercent = Math.min(100, (currentValue / target) * 100);
@@ -402,6 +411,12 @@ export class AchievementService {
         }
       }
 
+      case AchievementType.CUSTOM: {
+        // Para CUSTOM, precisamos da conquista completa para saber a métrica
+        // Isso será tratado por getCustomProgressValue
+        return 0;
+      }
+
       default:
         return 0;
     }
@@ -420,5 +435,292 @@ export class AchievementService {
     await this.firestore.updateAchievementProgress(userId, achievementId, {
       progress: progressValue,
     });
+  }
+
+  // ==========================================
+  // VERIFICADORES DE CONQUISTAS CUSTOMIZADAS
+  // ==========================================
+
+  /**
+   * Verifica conquistas do tipo CUSTOM baseadas em métricas específicas
+   */
+  async checkCustomAchievement(
+    userId: string,
+    achievement: Achievement
+  ): Promise<boolean> {
+    const { target, params } = achievement.condition;
+    const metric = params?.metric as string;
+
+    if (!metric) {
+      console.warn(
+        `Conquista CUSTOM "${achievement.id}" não possui parâmetro "metric" definido.`
+      );
+      return false;
+    }
+
+    try {
+      const metrics = await this.firestore.getUserMetrics(userId);
+
+      switch (metric) {
+        case "unique_decks_studied":
+          return metrics.uniqueDecksStudied.length >= target;
+
+        case "difficulty_levels_used":
+          return metrics.difficultyLevelsUsed.length >= target;
+
+        case "marketplace_decks_added":
+          return metrics.marketplaceDecksAdded.length >= target;
+
+        case "profile_completed":
+          return metrics.profileCompleted === true;
+
+        case "cards_reviewed_single_day":
+          return metrics.maxCardsInSingleDay >= target;
+
+        case "study_sessions_before_hour":
+          return metrics.studySessionsBeforeHour.length >= target;
+
+        case "study_sessions_after_hour":
+          return metrics.studySessionsAfterHour.length >= target;
+
+        case "decks_shared":
+          return metrics.decksShared.length >= target;
+
+        case "deck_reviews_submitted":
+          return metrics.deckReviewsSubmitted >= target;
+
+        case "active_decks":
+          return metrics.activeDecks.length >= target;
+
+        case "easy_cards_streak":
+          return metrics.maxEasyCardsStreak >= target;
+
+        case "hard_cards_completed":
+          return metrics.hardCardsCompleted >= target;
+
+        case "expert_cards_completed":
+          return metrics.expertCardsCompleted >= target;
+
+        case "decks_completed":
+          return metrics.decksCompleted.length >= target;
+
+        case "decks_studied_same_day":
+          return this.checkDecksStudiedSameDay(metrics, target);
+
+        case "minimum_cards_consecutive_days":
+          return this.checkMinimumCardsConsecutiveDays(
+            metrics,
+            params?.consecutiveDays as number,
+            params?.minimumCardsPerDay as number
+          );
+
+        case "cards_created_in_week":
+          // Esta métrica precisa ser calculada diferentemente
+          return await this.checkCardsCreatedInWeek(userId, target);
+
+        case "card_review_iterations":
+          // Esta métrica requer rastreamento específico de cards
+          return await this.checkCardReviewIterations(userId, target);
+
+        default:
+          console.warn(
+            `Métrica customizada desconhecida: "${metric}" (achievement: ${achievement.id})`
+          );
+          return false;
+      }
+    } catch (error) {
+      console.error(
+        `Erro ao verificar conquista customizada ${achievement.id}:`,
+        error
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Verifica se o usuário estudou N decks diferentes no mesmo dia
+   */
+  private checkDecksStudiedSameDay(
+    metrics: UserMetrics,
+    target: number
+  ): boolean {
+    // Esta verificação precisa de dados mais detalhados
+    // Por ora, verificamos se o usuário tem pelo menos target decks estudados
+    return metrics.uniqueDecksStudied.length >= target;
+  }
+
+  /**
+   * Verifica se o usuário estudou o mínimo de cards por N dias consecutivos
+   */
+  private checkMinimumCardsConsecutiveDays(
+    metrics: UserMetrics,
+    consecutiveDays: number,
+    minimumCardsPerDay: number
+  ): boolean {
+    if (!consecutiveDays || !minimumCardsPerDay) {
+      return false;
+    }
+
+    const cardsPerDay = metrics.cardsPerDay || {};
+    const dates = Object.keys(cardsPerDay).sort();
+
+    if (dates.length < consecutiveDays) {
+      return false;
+    }
+
+    let currentStreak = 0;
+    let previousDate: Date | null = null;
+
+    for (const dateStr of dates) {
+      const count = cardsPerDay[dateStr] ?? 0;
+      if (count < minimumCardsPerDay) {
+        currentStreak = 0;
+        previousDate = null;
+        continue;
+      }
+
+      const currentDate = new Date(dateStr);
+
+      if (previousDate) {
+        const diffDays = Math.round(
+          (currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+
+        if (diffDays === 1) {
+          currentStreak++;
+        } else {
+          currentStreak = 1;
+        }
+      } else {
+        currentStreak = 1;
+      }
+
+      if (currentStreak >= consecutiveDays) {
+        return true;
+      }
+
+      previousDate = currentDate;
+    }
+
+    return false;
+  }
+
+  /**
+   * Verifica se o usuário criou N cards em uma semana
+   */
+  private async checkCardsCreatedInWeek(
+    userId: string,
+    target: number
+  ): Promise<boolean> {
+    // Buscar transações de criação de cards dos últimos 7 dias
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+    const transactions = await this.firestore.getXPTransactionsByPeriod(
+      sevenDaysAgo,
+      new Date(),
+      XPSource.CARD_CREATION
+    );
+
+    const userTransactions = transactions.filter((t) => t.userId === userId);
+    return userTransactions.length >= target;
+  }
+
+  /**
+   * Verifica se o usuário revisou o mesmo card N vezes
+   */
+  private async checkCardReviewIterations(
+    userId: string,
+    target: number
+  ): Promise<boolean> {
+    // Buscar todas as transações de revisão do usuário
+    const transactions = await this.firestore.getUserXPTransactions(userId, 200);
+    const reviewTransactions = transactions.filter(
+      (t) => t.source === XPSource.REVIEW
+    );
+
+    // Contar revisões por card (sourceId)
+    const reviewsPerCard = new Map<string, number>();
+    for (const t of reviewTransactions) {
+      const count = reviewsPerCard.get(t.sourceId) || 0;
+      reviewsPerCard.set(t.sourceId, count + 1);
+    }
+
+    // Verificar se algum card atingiu o target
+    for (const count of reviewsPerCard.values()) {
+      if (count >= target) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Obtém o valor de progresso atual para conquistas customizadas
+   */
+  private async getCustomProgressValue(
+    userId: string,
+    achievement: Achievement
+  ): Promise<number> {
+    const { target, params } = achievement.condition;
+    const metric = params?.metric as string;
+
+    if (!metric) {
+      return 0;
+    }
+
+    try {
+      const metrics = await this.firestore.getUserMetrics(userId);
+
+      switch (metric) {
+        case "unique_decks_studied":
+          return metrics.uniqueDecksStudied.length;
+
+        case "difficulty_levels_used":
+          return metrics.difficultyLevelsUsed.length;
+
+        case "marketplace_decks_added":
+          return metrics.marketplaceDecksAdded.length;
+
+        case "profile_completed":
+          return metrics.profileCompleted ? 1 : 0;
+
+        case "cards_reviewed_single_day":
+          return metrics.maxCardsInSingleDay;
+
+        case "study_sessions_before_hour":
+          return metrics.studySessionsBeforeHour.length;
+
+        case "study_sessions_after_hour":
+          return metrics.studySessionsAfterHour.length;
+
+        case "decks_shared":
+          return metrics.decksShared.length;
+
+        case "deck_reviews_submitted":
+          return metrics.deckReviewsSubmitted;
+
+        case "active_decks":
+          return metrics.activeDecks.length;
+
+        case "easy_cards_streak":
+          return metrics.maxEasyCardsStreak;
+
+        case "hard_cards_completed":
+          return metrics.hardCardsCompleted;
+
+        case "expert_cards_completed":
+          return metrics.expertCardsCompleted;
+
+        case "decks_completed":
+          return metrics.decksCompleted.length;
+
+        default:
+          return 0;
+      }
+    } catch (error) {
+      return 0;
+    }
   }
 }
