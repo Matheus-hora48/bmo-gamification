@@ -76,6 +76,7 @@ const userAchievementsCollection = firestore.collection("userAchievements");
 const dailyProgressCollection = firestore.collection("dailyProgress");
 const xpTransactionsCollection = firestore.collection("xpTransactions");
 const streaksCollection = firestore.collection("streaks");
+const userMetricsCollection = firestore.collection("userMetrics");
 
 export const firestoreCollections = {
   users: () => usersCollection,
@@ -111,6 +112,7 @@ export const firestoreCollections = {
       .collection("transactions")
       .doc(entryId),
   streaksDoc: (userId: string) => streaksCollection.doc(userId),
+  userMetricsDoc: (userId: string) => userMetricsCollection.doc(userId),
 } as const;
 
 export { firebaseApp, firestore };
