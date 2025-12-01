@@ -11,7 +11,7 @@ const defaultServiceAccountPath = path.resolve(
 function loadServiceAccount(): ServiceAccount | null {
   // 1. Tentar carregar das variáveis de ambiente (produção)
   const inlineCredentials = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
-  
+
   if (inlineCredentials) {
     try {
       return JSON.parse(inlineCredentials) as ServiceAccount;
@@ -31,18 +31,21 @@ function loadServiceAccount(): ServiceAccount | null {
       const fileContents = readFileSync(resolvedPath, "utf8");
       return JSON.parse(fileContents) as ServiceAccount;
     } catch (error) {
-      console.warn(`Erro ao carregar arquivo Firebase em "${resolvedPath}":`, error);
+      console.warn(
+        `Erro ao carregar arquivo Firebase em "${resolvedPath}":`,
+        error
+      );
     }
   }
 
   // 3. Se não conseguiu carregar de nenhuma forma
   console.warn(
     `Credenciais do Firebase não encontradas. Tentativas:\n` +
-    `- Variável FIREBASE_SERVICE_ACCOUNT_JSON: ${inlineCredentials ? 'Definida mas inválida' : 'Não definida'}\n` +
-    `- Arquivo em "${resolvedPath}": ${existsSync(resolvedPath) ? 'Existe mas inválido' : 'Não existe'}\n` +
-    `Firebase será inicializado sem credenciais (modo compatibilidade).`
+      `- Variável FIREBASE_SERVICE_ACCOUNT_JSON: ${inlineCredentials ? "Definida mas inválida" : "Não definida"}\n` +
+      `- Arquivo em "${resolvedPath}": ${existsSync(resolvedPath) ? "Existe mas inválido" : "Não existe"}\n` +
+      `Firebase será inicializado sem credenciais (modo compatibilidade).`
   );
-  
+
   return null;
 }
 
@@ -52,7 +55,7 @@ function initializeFirebase() {
   }
 
   const serviceAccount = loadServiceAccount();
-  
+
   if (serviceAccount) {
     return admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
