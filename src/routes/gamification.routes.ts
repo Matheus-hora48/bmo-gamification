@@ -232,4 +232,202 @@ router.get("/achievements/:userId", controller.getUserAchievements);
  */
 router.post("/check-achievements/:userId", controller.checkAchievements);
 
+// ==========================================
+// ROTAS PARA MÉTRICAS CUSTOMIZADAS
+// ==========================================
+
+/**
+ * @swagger
+ * /api/gamification/marketplace-deck-added:
+ *   post:
+ *     summary: Registrar deck adicionado do marketplace
+ *     tags: [Gamification - Métricas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - deckId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               deckId:
+ *                 type: string
+ */
+router.post("/marketplace-deck-added", controller.onMarketplaceDeckAdded);
+
+/**
+ * @swagger
+ * /api/gamification/profile-completed:
+ *   post:
+ *     summary: Registrar perfil completo
+ *     tags: [Gamification - Métricas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - completed
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               completed:
+ *                 type: boolean
+ */
+router.post("/profile-completed", controller.onProfileCompleted);
+
+/**
+ * @swagger
+ * /api/gamification/deck-shared:
+ *   post:
+ *     summary: Registrar compartilhamento de deck
+ *     tags: [Gamification - Métricas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - deckId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               deckId:
+ *                 type: string
+ */
+router.post("/deck-shared", controller.onDeckShared);
+
+/**
+ * @swagger
+ * /api/gamification/deck-rated:
+ *   post:
+ *     summary: Registrar avaliação de deck
+ *     tags: [Gamification - Métricas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - deckId
+ *               - rating
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               deckId:
+ *                 type: string
+ *               rating:
+ *                 type: number
+ *                 minimum: 1
+ *                 maximum: 5
+ */
+router.post("/deck-rated", controller.onDeckRated);
+
+/**
+ * @swagger
+ * /api/gamification/deck-completed:
+ *   post:
+ *     summary: Registrar conclusão de deck (100%)
+ *     tags: [Gamification - Métricas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - deckId
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               deckId:
+ *                 type: string
+ */
+router.post("/deck-completed", controller.onDeckCompleted);
+
+/**
+ * @swagger
+ * /api/gamification/active-decks:
+ *   post:
+ *     summary: Atualizar lista de decks ativos
+ *     tags: [Gamification - Métricas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - deckIds
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               deckIds:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ */
+router.post("/active-decks", controller.updateActiveDecks);
+
+/**
+ * @swagger
+ * /api/gamification/study-session:
+ *   post:
+ *     summary: Registrar sessão de estudo com horário
+ *     tags: [Gamification - Métricas]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *               - deckId
+ *               - date
+ *               - hour
+ *             properties:
+ *               userId:
+ *                 type: string
+ *               deckId:
+ *                 type: string
+ *               date:
+ *                 type: string
+ *                 format: date
+ *               hour:
+ *                 type: number
+ *                 minimum: 0
+ *                 maximum: 23
+ *               cardsReviewed:
+ *                 type: number
+ */
+router.post("/study-session", controller.onStudySession);
+
+/**
+ * @swagger
+ * /api/gamification/metrics/{userId}:
+ *   get:
+ *     summary: Obter métricas customizadas do usuário
+ *     tags: [Gamification - Métricas]
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ */
+router.get("/metrics/:userId", controller.getUserMetrics);
+
 export default router;
