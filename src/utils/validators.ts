@@ -36,6 +36,12 @@ export const ProcessReviewSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato YYYY-MM-DD")
     .optional(),
+  deckId: z
+    .string()
+    .trim()
+    .min(1, "ID do deck é obrigatório")
+    .max(128, "ID do deck muito longo")
+    .optional(),
 });
 
 /**
