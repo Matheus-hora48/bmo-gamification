@@ -544,9 +544,8 @@ export class AchievementService {
     metrics: UserMetrics,
     target: number
   ): boolean {
-    // Esta verificação precisa de dados mais detalhados
-    // Por ora, verificamos se o usuário tem pelo menos target decks estudados
-    return metrics.uniqueDecksStudied.length >= target;
+    // Usa o máximo de decks estudados no mesmo dia
+    return (metrics.maxDecksStudiedSameDay || 0) >= target;
   }
 
   /**
@@ -583,7 +582,8 @@ export class AchievementService {
 
       if (previousDate) {
         const diffDays = Math.round(
-          (currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24)
+          (currentDate.getTime() - previousDate.getTime()) /
+            (1000 * 60 * 60 * 24)
         );
 
         if (diffDays === 1) {
@@ -634,7 +634,10 @@ export class AchievementService {
     target: number
   ): Promise<boolean> {
     // Buscar todas as transações de revisão do usuário
-    const transactions = await this.firestore.getUserXPTransactions(userId, 200);
+    const transactions = await this.firestore.getUserXPTransactions(
+      userId,
+      200
+    );
     const reviewTransactions = transactions.filter(
       (t) => t.source === XPSource.REVIEW
     );
