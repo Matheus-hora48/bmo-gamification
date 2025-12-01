@@ -146,6 +146,8 @@ export class GamificationController {
       // Registrar deck estudado (se fornecido)
       if (deckId) {
         await this.firestoreService.addStudiedDeck(userId, deckId);
+        // Registrar também para a métrica de decks estudados no mesmo dia
+        await this.firestoreService.addDeckStudiedToday(userId, deckId);
       }
 
       // Registrar horário da sessão de estudo
