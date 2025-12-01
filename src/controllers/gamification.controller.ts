@@ -23,6 +23,48 @@ import {
 import { XP_VALUES } from "../config/constants";
 import { XPSource } from "../models/XPTransaction";
 
+// Schemas de validação adicionais para métricas customizadas
+import { z } from "zod";
+
+const MarketplaceDeckSchema = z.object({
+  userId: z.string().min(1).max(128),
+  deckId: z.string().min(1).max(128),
+});
+
+const ProfileCompletedSchema = z.object({
+  userId: z.string().min(1).max(128),
+  completed: z.boolean(),
+});
+
+const ShareDeckSchema = z.object({
+  userId: z.string().min(1).max(128),
+  deckId: z.string().min(1).max(128),
+});
+
+const RateDeckSchema = z.object({
+  userId: z.string().min(1).max(128),
+  deckId: z.string().min(1).max(128),
+  rating: z.number().min(1).max(5),
+});
+
+const CompleteDeckSchema = z.object({
+  userId: z.string().min(1).max(128),
+  deckId: z.string().min(1).max(128),
+});
+
+const ActiveDecksSchema = z.object({
+  userId: z.string().min(1).max(128),
+  deckIds: z.array(z.string().min(1).max(128)),
+});
+
+const StudySessionSchema = z.object({
+  userId: z.string().min(1).max(128),
+  deckId: z.string().min(1).max(128),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  hour: z.number().min(0).max(23),
+  cardsReviewed: z.number().min(0).optional(),
+});
+
 /**
  * Gamification Controller
  *
@@ -71,7 +113,9 @@ export class GamificationController {
         return;
       }
 
-      const { userId, cardId, difficulty, date } = validation.data;
+      const { userId, cardId, difficulty, deckId } = validation.data;
+      const reviewDate = (validation.data.date ||
+        new Date().toISOString().split("T")[0]) as string;
 
       // Processar revisão através do XP Service
       const xpResult = await this.xpService.processCardReview(
@@ -85,19 +129,63 @@ export class GamificationController {
       // Registrar no progresso diário
       const dailyProgress = await this.dailyGoalService.recordCardReview(
         userId,
-        date
+        reviewDate
       );
 
       // Verificar e atualizar streak se a meta diária foi atingida
       const streakResult = await this.streakService.checkAndUpdateDailyStreak(
         userId,
-        date
+        reviewDate
       );
 
-      // Verificar conquistas relacionadas a reviews
+      // ====== ATUALIZAR MÉTRICAS CUSTOMIZADAS ======
+
+      // Registrar nível de dificuldade usado
+      await this.firestoreService.addDifficultyLevelUsed(userId, difficulty);
+
+      // Registrar deck estudado (se fornecido)
+      if (deckId) {
+        await this.firestoreService.addStudiedDeck(userId, deckId);
+      }
+
+      // Registrar horário da sessão de estudo
+      const currentHour = new Date().getHours();
+      await this.firestoreService.recordStudySessionTime(
+        userId,
+        reviewDate,
+        currentHour
+      );
+
+      // Atualizar contagem de cards no dia
+      await this.firestoreService.updateCardsPerDay(
+        userId,
+        reviewDate,
+        dailyProgress.cardsReviewed
+      );
+
+      // Atualizar streak de cards "fácil"
+      if (difficulty === "easy") {
+        const metrics = await this.firestoreService.getUserMetrics(userId);
+        await this.firestoreService.updateEasyCardsStreak(
+          userId,
+          metrics.easyCardsStreak + 1
+        );
+      } else {
+        // Resetar streak de cards fácil se não foi "easy"
+        await this.firestoreService.updateEasyCardsStreak(userId, 0);
+      }
+
+      // Incrementar contadores de dificuldade
+      if (difficulty === "hard") {
+        await this.firestoreService.incrementHardCardsCompleted(userId);
+      }
+
+      // ====== FIM DAS MÉTRICAS CUSTOMIZADAS ======
+
+      // Verificar conquistas relacionadas a reviews E customizadas
       const newAchievements = await this.achievementService.checkAchievements(
         userId,
-        [AchievementType.REVIEWS_COMPLETED]
+        [AchievementType.REVIEWS_COMPLETED, AchievementType.CUSTOM]
       );
 
       // Calcular XP ganho nesta revisão (baseado na dificuldade)
@@ -805,6 +893,444 @@ export class GamificationController {
       });
       res.status(500).json({
         error: "Erro ao enviar broadcast",
+      });
+    }
+  };
+
+  // ==========================================
+  // ENDPOINTS PARA MÉTRICAS CUSTOMIZADAS
+  // ==========================================
+
+  /**
+   * POST /marketplace-deck-added
+   * Registrar adição de deck do marketplace
+   */
+  onMarketplaceDeckAdded = async (
+    req: Request,
+    res: Response
+  ): Promise<void> => {
+    try {
+      logger.debug(
+        "POST /marketplace-deck-added - Registrando deck do marketplace",
+        {
+          body: req.body,
+        }
+      );
+
+      const validation = validateSchema(MarketplaceDeckSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({
+          error: "Parâmetros inválidos",
+          details: validation.error,
+        });
+        return;
+      }
+
+      const { userId, deckId } = validation.data;
+
+      // Registrar deck do marketplace
+      await this.firestoreService.addMarketplaceDeck(userId, deckId);
+
+      // Também adicionar como deck ativo
+      await this.firestoreService.addActiveDeck(userId, deckId);
+
+      // Verificar conquistas customizadas
+      const newAchievements = await this.achievementService.checkAchievements(
+        userId,
+        [AchievementType.CUSTOM]
+      );
+
+      logger.info("Deck do marketplace registrado", { userId, deckId });
+
+      res.status(200).json({
+        success: true,
+        message: "Deck do marketplace registrado com sucesso",
+        newAchievements: newAchievements.map((a) => ({
+          id: a.id,
+          name: a.name,
+          description: a.description,
+          tier: a.tier,
+          xpReward: a.xpReward,
+        })),
+      });
+    } catch (error) {
+      logger.error("Erro ao registrar deck do marketplace", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        error: "Erro ao registrar deck do marketplace",
+      });
+    }
+  };
+
+  /**
+   * POST /profile-completed
+   * Registrar perfil completo
+   */
+  onProfileCompleted = async (req: Request, res: Response): Promise<void> => {
+    try {
+      logger.debug("POST /profile-completed - Registrando perfil completo", {
+        body: req.body,
+      });
+
+      const validation = validateSchema(ProfileCompletedSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({
+          error: "Parâmetros inválidos",
+          details: validation.error,
+        });
+        return;
+      }
+
+      const { userId, completed } = validation.data;
+
+      // Atualizar status do perfil
+      await this.firestoreService.setProfileCompleted(userId, completed);
+
+      // Verificar conquistas customizadas
+      const newAchievements = await this.achievementService.checkAchievements(
+        userId,
+        [AchievementType.CUSTOM]
+      );
+
+      logger.info("Status do perfil atualizado", { userId, completed });
+
+      res.status(200).json({
+        success: true,
+        message: "Status do perfil atualizado com sucesso",
+        newAchievements: newAchievements.map((a) => ({
+          id: a.id,
+          name: a.name,
+          description: a.description,
+          tier: a.tier,
+          xpReward: a.xpReward,
+        })),
+      });
+    } catch (error) {
+      logger.error("Erro ao atualizar status do perfil", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        error: "Erro ao atualizar status do perfil",
+      });
+    }
+  };
+
+  /**
+   * POST /deck-shared
+   * Registrar compartilhamento de deck
+   */
+  onDeckShared = async (req: Request, res: Response): Promise<void> => {
+    try {
+      logger.debug("POST /deck-shared - Registrando compartilhamento de deck", {
+        body: req.body,
+      });
+
+      const validation = validateSchema(ShareDeckSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({
+          error: "Parâmetros inválidos",
+          details: validation.error,
+        });
+        return;
+      }
+
+      const { userId, deckId } = validation.data;
+
+      // Registrar deck compartilhado
+      await this.firestoreService.addSharedDeck(userId, deckId);
+
+      // Verificar conquistas customizadas
+      const newAchievements = await this.achievementService.checkAchievements(
+        userId,
+        [AchievementType.CUSTOM]
+      );
+
+      logger.info("Deck compartilhado registrado", { userId, deckId });
+
+      res.status(200).json({
+        success: true,
+        message: "Compartilhamento de deck registrado com sucesso",
+        newAchievements: newAchievements.map((a) => ({
+          id: a.id,
+          name: a.name,
+          description: a.description,
+          tier: a.tier,
+          xpReward: a.xpReward,
+        })),
+      });
+    } catch (error) {
+      logger.error("Erro ao registrar compartilhamento de deck", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        error: "Erro ao registrar compartilhamento de deck",
+      });
+    }
+  };
+
+  /**
+   * POST /deck-rated
+   * Registrar avaliação de deck
+   */
+  onDeckRated = async (req: Request, res: Response): Promise<void> => {
+    try {
+      logger.debug("POST /deck-rated - Registrando avaliação de deck", {
+        body: req.body,
+      });
+
+      const validation = validateSchema(RateDeckSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({
+          error: "Parâmetros inválidos",
+          details: validation.error,
+        });
+        return;
+      }
+
+      const { userId } = validation.data;
+
+      // Incrementar contador de avaliações
+      await this.firestoreService.incrementDeckReviews(userId);
+
+      // Verificar conquistas customizadas
+      const newAchievements = await this.achievementService.checkAchievements(
+        userId,
+        [AchievementType.CUSTOM]
+      );
+
+      logger.info("Avaliação de deck registrada", { userId });
+
+      res.status(200).json({
+        success: true,
+        message: "Avaliação de deck registrada com sucesso",
+        newAchievements: newAchievements.map((a) => ({
+          id: a.id,
+          name: a.name,
+          description: a.description,
+          tier: a.tier,
+          xpReward: a.xpReward,
+        })),
+      });
+    } catch (error) {
+      logger.error("Erro ao registrar avaliação de deck", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        error: "Erro ao registrar avaliação de deck",
+      });
+    }
+  };
+
+  /**
+   * POST /deck-completed
+   * Registrar conclusão de deck (100%)
+   */
+  onDeckCompleted = async (req: Request, res: Response): Promise<void> => {
+    try {
+      logger.debug("POST /deck-completed - Registrando conclusão de deck", {
+        body: req.body,
+      });
+
+      const validation = validateSchema(CompleteDeckSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({
+          error: "Parâmetros inválidos",
+          details: validation.error,
+        });
+        return;
+      }
+
+      const { userId, deckId } = validation.data;
+
+      // Registrar deck completado
+      await this.firestoreService.addCompletedDeck(userId, deckId);
+
+      // Verificar conquistas customizadas
+      const newAchievements = await this.achievementService.checkAchievements(
+        userId,
+        [AchievementType.CUSTOM]
+      );
+
+      logger.info("Conclusão de deck registrada", { userId, deckId });
+
+      res.status(200).json({
+        success: true,
+        message: "Conclusão de deck registrada com sucesso",
+        newAchievements: newAchievements.map((a) => ({
+          id: a.id,
+          name: a.name,
+          description: a.description,
+          tier: a.tier,
+          xpReward: a.xpReward,
+        })),
+      });
+    } catch (error) {
+      logger.error("Erro ao registrar conclusão de deck", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        error: "Erro ao registrar conclusão de deck",
+      });
+    }
+  };
+
+  /**
+   * POST /active-decks
+   * Atualizar lista de decks ativos
+   */
+  updateActiveDecks = async (req: Request, res: Response): Promise<void> => {
+    try {
+      logger.debug("POST /active-decks - Atualizando decks ativos", {
+        body: req.body,
+      });
+
+      const validation = validateSchema(ActiveDecksSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({
+          error: "Parâmetros inválidos",
+          details: validation.error,
+        });
+        return;
+      }
+
+      const { userId, deckIds } = validation.data;
+
+      // Atualizar lista de decks ativos
+      await this.firestoreService.setActiveDecks(userId, deckIds);
+
+      // Verificar conquistas customizadas
+      const newAchievements = await this.achievementService.checkAchievements(
+        userId,
+        [AchievementType.CUSTOM]
+      );
+
+      logger.info("Decks ativos atualizados", {
+        userId,
+        deckCount: deckIds.length,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Decks ativos atualizados com sucesso",
+        newAchievements: newAchievements.map((a) => ({
+          id: a.id,
+          name: a.name,
+          description: a.description,
+          tier: a.tier,
+          xpReward: a.xpReward,
+        })),
+      });
+    } catch (error) {
+      logger.error("Erro ao atualizar decks ativos", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        error: "Erro ao atualizar decks ativos",
+      });
+    }
+  };
+
+  /**
+   * POST /study-session
+   * Registrar sessão de estudo com horário
+   */
+  onStudySession = async (req: Request, res: Response): Promise<void> => {
+    try {
+      logger.debug("POST /study-session - Registrando sessão de estudo", {
+        body: req.body,
+      });
+
+      const validation = validateSchema(StudySessionSchema, req.body);
+      if (!validation.success) {
+        res.status(400).json({
+          error: "Parâmetros inválidos",
+          details: validation.error,
+        });
+        return;
+      }
+
+      const { userId, deckId, date, hour, cardsReviewed } = validation.data;
+
+      // Registrar horário da sessão
+      await this.firestoreService.recordStudySessionTime(userId, date, hour);
+
+      // Registrar deck estudado
+      await this.firestoreService.addStudiedDeck(userId, deckId);
+
+      // Atualizar cards por dia se fornecido
+      if (cardsReviewed !== undefined) {
+        await this.firestoreService.updateCardsPerDay(
+          userId,
+          date,
+          cardsReviewed
+        );
+      }
+
+      // Verificar conquistas customizadas
+      const newAchievements = await this.achievementService.checkAchievements(
+        userId,
+        [AchievementType.CUSTOM]
+      );
+
+      logger.info("Sessão de estudo registrada", { userId, deckId, hour });
+
+      res.status(200).json({
+        success: true,
+        message: "Sessão de estudo registrada com sucesso",
+        newAchievements: newAchievements.map((a) => ({
+          id: a.id,
+          name: a.name,
+          description: a.description,
+          tier: a.tier,
+          xpReward: a.xpReward,
+        })),
+      });
+    } catch (error) {
+      logger.error("Erro ao registrar sessão de estudo", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        error: "Erro ao registrar sessão de estudo",
+      });
+    }
+  };
+
+  /**
+   * GET /metrics/:userId
+   * Obter métricas customizadas do usuário
+   */
+  getUserMetrics = async (req: Request, res: Response): Promise<void> => {
+    try {
+      logger.debug("GET /metrics/:userId - Buscando métricas do usuário", {
+        params: req.params,
+      });
+
+      const validation = validateSchema(UserIdParamSchema, req.params);
+      if (!validation.success) {
+        res.status(400).json({
+          error: "Parâmetros inválidos",
+          details: validation.error,
+        });
+        return;
+      }
+
+      const { userId } = validation.data;
+
+      const metrics = await this.firestoreService.getUserMetrics(userId);
+
+      logger.info("Métricas do usuário recuperadas", { userId });
+
+      res.status(200).json({
+        success: true,
+        metrics,
+      });
+    } catch (error) {
+      logger.error("Erro ao buscar métricas do usuário", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      res.status(500).json({
+        error: "Erro ao buscar métricas do usuário",
       });
     }
   };
