@@ -6,6 +6,18 @@ import { AchievementType } from "../models/Achievement";
  */
 
 /**
+ * Retorna a data atual no fuso horário local no formato YYYY-MM-DD
+ * Importante: toISOString() retorna a data em UTC, o que pode causar
+ * problemas quando o horário local é diferente (ex: 21:00 UTC-3 = 00:00 UTC do dia seguinte)
+ */
+export function getLocalDateString(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/**
  * Valida dificuldade de revisão de card
  */
 export const ReviewDifficultySchema = z.enum(

@@ -19,6 +19,7 @@ import {
   ProcessReviewSchema,
   UserIdParamSchema,
   validateSchema,
+  getLocalDateString,
 } from "../utils/validators";
 import { XP_VALUES } from "../config/constants";
 import { XPSource } from "../models/XPTransaction";
@@ -114,8 +115,7 @@ export class GamificationController {
       }
 
       const { userId, cardId, difficulty, deckId } = validation.data;
-      const reviewDate = (validation.data.date ||
-        new Date().toISOString().split("T")[0]) as string;
+      const reviewDate = validation.data.date || getLocalDateString();
 
       // Processar revisão através do XP Service
       const xpResult = await this.xpService.processCardReview(
@@ -551,8 +551,8 @@ export class GamificationController {
       const { userId } = paramValidation.data;
       const { date } = queryValidation.data;
 
-      // Usar data de hoje se não fornecida
-      const targetDate = date || new Date().toISOString().split("T")[0];
+      // Usar data de hoje se não fornecida (no fuso horário local)
+      const targetDate = date || getLocalDateString();
 
       // Buscar progresso diário
       const dailyProgress = await this.firestoreService.getDailyProgress(

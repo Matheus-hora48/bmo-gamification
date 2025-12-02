@@ -22,6 +22,7 @@ import {
 } from "../models/UserAchievement";
 import type { XPTransaction } from "../models/XPTransaction";
 import { isValidXPTransaction, XPSource } from "../models/XPTransaction";
+import { getLocalDateString } from "../utils/validators";
 
 type FirestoreCollections = typeof firestoreCollections;
 type FieldValueNamespace = typeof admin.firestore.FieldValue;
@@ -619,7 +620,7 @@ export class FirestoreService {
    * Registra um deck estudado em um dia específico (para conquista Multi-tarefa)
    */
   async addDeckStudiedToday(userId: string, deckId: string): Promise<void> {
-    const today: string = new Date().toISOString().split("T")[0] as string;
+    const today: string = getLocalDateString();
     const metrics = await this.getUserMetrics(userId);
 
     // Atualiza o registro de decks estudados por dia
