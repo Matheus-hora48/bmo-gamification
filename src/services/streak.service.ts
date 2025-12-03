@@ -1,5 +1,5 @@
 import { DAILY_GOAL_TARGET, XP_VALUES } from "../config/constants";
-import type { StreakData } from "../models/StreakData";
+import type { StreakData, StreakHistoryItem } from "../models/StreakData";
 import type { UserProgress } from "../models/UserProgress";
 import { XPSource } from "../models/XPTransaction";
 import { FirestoreService } from "./firestore.service";
@@ -128,6 +128,12 @@ export class StreakService {
   /**
    * Verifica e atualiza o streak baseado na meta diária atual
    * Deve ser chamado quando o usuário completa a meta diária pela primeira vez no dia
+   *
+   * LÓGICA DE STREAK CONSECUTIVO:
+   * - Se é o primeiro dia do usuário: inicia streak em 1
+   * - Se o dia anterior (ontem) teve meta atingida: incrementa streak
+   * - Se o dia anterior NÃO teve meta atingida: reseta streak para 1
+   *
    * @param userId ID do usuário
    * @param date Data no formato YYYY-MM-DD
    * @returns Resultado do incremento de streak (se aplicável)
@@ -143,13 +149,13 @@ export class StreakService {
     const checkDate = date ?? this.getTodayDate();
 
     try {
-      // Obter progresso diário
+      // Obter progresso diário de hoje
       const dailyProgress = await this.firestore.getDailyProgress(
         userId,
         checkDate
       );
 
-      // Verificar se a meta foi atingida
+      // Verificar se a meta foi atingida hoje
       if (
         !dailyProgress.goalMet ||
         dailyProgress.cardsReviewed < DAILY_GOAL_TARGET
@@ -157,14 +163,10 @@ export class StreakService {
         return null;
       }
 
-      // Verificar se já incrementamos o streak hoje.
-      // Usar os dados de `streak` (history / lastUpdate) é mais confiável do que
-      // checar `userProgress.lastActivityDate`, porque este último pode ter sido
-      // atualizado por outras ações (XP, achievements) antes do progresso diário
-      // ser registrado — o que impedia o incremento quando a meta era atingida
-      // durante o mesmo fluxo.
+      // Verificar se já processamos o streak hoje
+      let streakData: StreakData | null = null;
       try {
-        const streakData = await this.firestore.getStreakData(userId);
+        streakData = await this.firestore.getStreakData(userId);
 
         const lastUpdateDate = streakData.lastUpdate
           ? this.toDateString(streakData.lastUpdate)
@@ -175,23 +177,110 @@ export class StreakService {
           : false;
 
         if (lastUpdateDate === checkDate || hasHistoryToday) {
-          // Já incrementado hoje — retornar o streak atual sem incrementar
+          // Já processado hoje — retornar o streak atual sem modificar
           return {
             streakData,
             bonusAwarded: 0,
           };
         }
       } catch {
-        // Se não existir registro de streak, vamos prosseguir e incrementar
-        // (incrementStreak criará/atualizará o documento conforme necessário).
+        // Se não existir registro de streak, vamos criar
+        streakData = null;
       }
 
-      // Meta atingida pela primeira vez hoje - incrementar streak
+      // ===== VERIFICAR SE O STREAK É CONSECUTIVO =====
+      const yesterday = this.getDateMinusDays(checkDate, 1);
+      let yesterdayGoalMet = false;
+
+      try {
+        const yesterdayProgress = await this.firestore.getDailyProgress(
+          userId,
+          yesterday
+        );
+        yesterdayGoalMet =
+          yesterdayProgress.goalMet &&
+          yesterdayProgress.cardsReviewed >= DAILY_GOAL_TARGET;
+      } catch {
+        // Sem dados de ontem = não atingiu meta
+        yesterdayGoalMet = false;
+      }
+
+      // Se ontem NÃO atingiu a meta, precisamos resetar o streak para 1
+      if (!yesterdayGoalMet) {
+        // Resetar streak e começar novo com 1
+        return await this.startNewStreak(userId, checkDate);
+      }
+
+      // Ontem atingiu a meta, então incrementar streak normalmente
       return await this.incrementStreak(userId);
     } catch (error) {
       // Se não existe progresso diário, não fazer nada
       return null;
     }
+  }
+
+  /**
+   * Inicia um novo streak (usado quando o streak anterior foi quebrado)
+   * @param userId ID do usuário
+   * @param date Data no formato YYYY-MM-DD
+   * @returns Resultado com streak iniciado em 1
+   */
+  private async startNewStreak(
+    userId: string,
+    date: string
+  ): Promise<StreakIncrementResult> {
+    // Obter dados atuais para preservar longest
+    let currentLongest = 0;
+    let currentHistory: StreakHistoryItem[] = [];
+
+    try {
+      const currentData = await this.firestore.getStreakData(userId);
+      currentLongest = currentData.longest;
+      currentHistory = currentData.history || [];
+    } catch {
+      // Primeiro streak do usuário
+    }
+
+    // Criar novo streak começando em 1
+    const updatedStreakData = await this.firestore.updateStreak(userId, {
+      current: 1,
+      longest: Math.max(1, currentLongest),
+      history: [...currentHistory, { date, count: 1 }],
+      lastUpdate: new Date(),
+    });
+
+    // Sincronizar com UserProgress
+    await this.firestore.updateUserProgress(userId, {
+      currentStreak: 1,
+      longestStreak: Math.max(1, currentLongest),
+      lastActivityDate: new Date(),
+    });
+
+    // Não há bônus para streak de 1 dia
+    return {
+      streakData: updatedStreakData,
+      bonusAwarded: 0,
+    };
+  }
+
+  /**
+   * Retorna uma data X dias atrás no formato YYYY-MM-DD
+   * @param dateStr Data base no formato YYYY-MM-DD
+   * @param days Número de dias para subtrair
+   * @returns Data no formato YYYY-MM-DD
+   */
+  private getDateMinusDays(dateStr: string, days: number): string {
+    const parts = dateStr.split("-").map(Number);
+    const year = parts[0] ?? 1970;
+    const month = parts[1] ?? 1;
+    const day = parts[2] ?? 1;
+    const date = new Date(year, month - 1, day);
+    date.setDate(date.getDate() - days);
+
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   }
 
   /**
@@ -261,18 +350,27 @@ export class StreakService {
   /**
    * Atualiza todos os streaks dos usuários (executado por cron job à meia-noite)
    * Verifica a meta diária de ontem e incrementa/reseta streaks conforme necessário
+   *
+   * LÓGICA:
+   * - Roda à meia-noite verificando o dia anterior (ontem)
+   * - Se ontem atingiu meta E anteontem também → incrementa streak
+   * - Se ontem atingiu meta MAS anteontem não → inicia novo streak em 1
+   * - Se ontem NÃO atingiu meta → reseta streak para 0
    */
   async updateAllStreaks(): Promise<{
     totalProcessed: number;
     incremented: number;
     reset: number;
+    started: number;
     errors: string[];
   }> {
     const yesterday = this.getYesterdayDate();
+    const dayBeforeYesterday = this.getDateMinusDays(yesterday, 1);
     const errors: string[] = [];
     let totalProcessed = 0;
     let incremented = 0;
     let reset = 0;
+    let started = 0;
 
     try {
       // Buscar todos os usuários com progresso
@@ -283,22 +381,48 @@ export class StreakService {
           totalProcessed++;
 
           // Verificar se a meta diária de ontem foi atingida
-          const dailyProgress = await this.firestore.getDailyProgress(
-            userId,
-            yesterday
-          );
+          let yesterdayGoalMet = false;
+          try {
+            const yesterdayProgress = await this.firestore.getDailyProgress(
+              userId,
+              yesterday
+            );
+            yesterdayGoalMet =
+              yesterdayProgress.goalMet &&
+              yesterdayProgress.cardsReviewed >= DAILY_GOAL_TARGET;
+          } catch {
+            yesterdayGoalMet = false;
+          }
 
-          if (
-            dailyProgress.goalMet &&
-            dailyProgress.cardsReviewed >= DAILY_GOAL_TARGET
-          ) {
-            // Meta atingida: incrementar streak
+          if (!yesterdayGoalMet) {
+            // Ontem NÃO atingiu meta: resetar streak
+            await this.resetStreak(userId);
+            reset++;
+            continue;
+          }
+
+          // Ontem atingiu meta, verificar anteontem para saber se incrementa ou inicia novo
+          let dayBeforeYesterdayGoalMet = false;
+          try {
+            const dayBeforeProgress = await this.firestore.getDailyProgress(
+              userId,
+              dayBeforeYesterday
+            );
+            dayBeforeYesterdayGoalMet =
+              dayBeforeProgress.goalMet &&
+              dayBeforeProgress.cardsReviewed >= DAILY_GOAL_TARGET;
+          } catch {
+            dayBeforeYesterdayGoalMet = false;
+          }
+
+          if (dayBeforeYesterdayGoalMet) {
+            // Anteontem também atingiu: incrementar streak
             await this.incrementStreak(userId);
             incremented++;
           } else {
-            // Meta não atingida: resetar streak
-            await this.resetStreak(userId);
-            reset++;
+            // Anteontem NÃO atingiu: iniciar novo streak em 1
+            await this.startNewStreak(userId, yesterday);
+            started++;
           }
         } catch (err) {
           const errorMsg = `Erro ao atualizar streak do usuário ${userId}: ${
@@ -313,6 +437,7 @@ export class StreakService {
         totalProcessed,
         incremented,
         reset,
+        started,
         errors,
       };
     } catch (err) {

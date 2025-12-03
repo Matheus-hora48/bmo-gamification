@@ -477,22 +477,36 @@ describe("StreakService", () => {
   });
 
   describe("updateAllStreaks", () => {
-    it("deve processar todos os usuários e atualizar streaks", async () => {
+    it("deve processar todos os usuários e atualizar streaks corretamente", async () => {
       // Mock do getAllUserIds no FirestoreService
       (mockFirestore as any).getAllUserIds = vi
         .fn()
-        .mockResolvedValue(["user1", "user2"]);
+        .mockResolvedValue(["user1", "user2", "user3"]);
 
-      // Mock de DailyProgress para ontem
+      // A nova lógica verifica:
+      // 1. Se ontem atingiu meta
+      // 2. Se sim, verifica se anteontem também atingiu (para incrementar vs iniciar novo)
+
+      // Mock de DailyProgress - chamado para cada usuário (ontem e anteontem se necessário)
       vi.mocked(mockFirestore.getDailyProgress)
+        // user1: ontem atingiu E anteontem atingiu -> incrementa
         .mockResolvedValueOnce({
           userId: "user1",
-          date: "2025-11-10",
+          date: "2025-11-10", // ontem
           cardsReviewed: 25,
           goalMet: true,
           xpEarned: 100,
           timestamp: new Date(),
         })
+        .mockResolvedValueOnce({
+          userId: "user1",
+          date: "2025-11-09", // anteontem
+          cardsReviewed: 22,
+          goalMet: true,
+          xpEarned: 100,
+          timestamp: new Date(),
+        })
+        // user2: ontem NÃO atingiu -> reset
         .mockResolvedValueOnce({
           userId: "user2",
           date: "2025-11-10",
@@ -500,9 +514,26 @@ describe("StreakService", () => {
           goalMet: false,
           xpEarned: 0,
           timestamp: new Date(),
+        })
+        // user3: ontem atingiu mas anteontem NÃO -> inicia novo streak
+        .mockResolvedValueOnce({
+          userId: "user3",
+          date: "2025-11-10", // ontem
+          cardsReviewed: 30,
+          goalMet: true,
+          xpEarned: 100,
+          timestamp: new Date(),
+        })
+        .mockResolvedValueOnce({
+          userId: "user3",
+          date: "2025-11-09", // anteontem
+          cardsReviewed: 5,
+          goalMet: false,
+          xpEarned: 0,
+          timestamp: new Date(),
         });
 
-      // Mock getStreakData para ambos usuários
+      // Mock getStreakData para user1 (incremento) e user3 (novo streak)
       vi.mocked(mockFirestore.getStreakData)
         .mockResolvedValueOnce({
           userId: "user1",
@@ -515,6 +546,13 @@ describe("StreakService", () => {
           userId: "user2",
           current: 5,
           longest: 10,
+          lastUpdate: new Date(),
+          history: [],
+        })
+        .mockResolvedValueOnce({
+          userId: "user3",
+          current: 0,
+          longest: 3,
           lastUpdate: new Date(),
           history: [],
         });
@@ -532,6 +570,13 @@ describe("StreakService", () => {
           userId: "user2",
           current: 0,
           longest: 10,
+          lastUpdate: new Date(),
+          history: [],
+        })
+        .mockResolvedValueOnce({
+          userId: "user3",
+          current: 1,
+          longest: 3,
           lastUpdate: new Date(),
           history: [],
         });
@@ -552,9 +597,10 @@ describe("StreakService", () => {
 
       const result = await service.updateAllStreaks();
 
-      expect(result.totalProcessed).toBe(2);
-      expect(result.incremented).toBe(1); // user1 atingiu meta
-      expect(result.reset).toBe(1); // user2 não atingiu meta
+      expect(result.totalProcessed).toBe(3);
+      expect(result.incremented).toBe(1); // user1: ontem + anteontem atingiram meta
+      expect(result.reset).toBe(1); // user2: ontem não atingiu meta
+      expect(result.started).toBe(1); // user3: ontem atingiu mas anteontem não -> novo streak
       expect(result.errors).toHaveLength(0);
     });
   });
