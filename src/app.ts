@@ -5,6 +5,7 @@ import helmet from "helmet";
 import swaggerUi from "swagger-ui-express";
 import "./config/firebase.config";
 import { swaggerSpec } from "./config/swagger.config";
+import scheduleKeepAlive from "./jobs/keep-alive.job";
 import scheduleUpdateStreaks from "./jobs/update-streaks.job";
 import { authMiddleware } from "./middlewares/auth.middleware";
 import {
@@ -86,6 +87,7 @@ if (require.main === module) {
 
     // Inicializar cron jobs
     scheduleUpdateStreaks();
+    scheduleKeepAlive();
   });
 }
 
