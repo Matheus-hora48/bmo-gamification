@@ -16,7 +16,10 @@ const MAX_INTERVAL_MS = 14 * 60 * 1000; // 14 minutos
  * Gera um intervalo aleatório entre MIN e MAX
  */
 function getRandomInterval(): number {
-  return Math.floor(Math.random() * (MAX_INTERVAL_MS - MIN_INTERVAL_MS + 1)) + MIN_INTERVAL_MS;
+  return (
+    Math.floor(Math.random() * (MAX_INTERVAL_MS - MIN_INTERVAL_MS + 1)) +
+    MIN_INTERVAL_MS
+  );
 }
 
 /**
@@ -34,7 +37,7 @@ async function selfPing(): Promise<void> {
       method: "GET",
       headers: {
         "User-Agent": "Mozilla/5.0 (compatible; HealthCheck/1.0)",
-        "Accept": "application/json",
+        Accept: "application/json",
         "Cache-Control": "no-cache",
       },
     });
@@ -42,7 +45,9 @@ async function selfPing(): Promise<void> {
     if (response.ok) {
       // Log discreto
       const nextInterval = getRandomInterval();
-      console.log(`[HC] OK ${new Date().toLocaleTimeString("pt-BR")} - next: ${Math.round(nextInterval / 60000)}min`);
+      console.log(
+        `[HC] OK ${new Date().toLocaleTimeString("pt-BR")} - next: ${Math.round(nextInterval / 60000)}min`
+      );
       scheduleNextPing(nextInterval);
     } else {
       console.warn(`[HC] Status ${response.status}`);
@@ -75,9 +80,9 @@ export function scheduleKeepAlive(): void {
 
   // Primeiro ping entre 30s e 2min após startup (variado)
   const initialDelay = Math.floor(Math.random() * 90000) + 30000;
-  
+
   console.log(`[HC] Iniciando em ${Math.round(initialDelay / 1000)}s`);
-  
+
   setTimeout(selfPing, initialDelay);
 }
 
