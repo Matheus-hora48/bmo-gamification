@@ -4,6 +4,7 @@ import type { UserProgress } from "../models/UserProgress";
 import { XPSource } from "../models/XPTransaction";
 import { FirestoreService } from "./firestore.service";
 import { XPService } from "./xp.service";
+import { logger } from "../utils/logger";
 
 export interface StreakIncrementResult {
   streakData: StreakData;
@@ -148,6 +149,11 @@ export class StreakService {
 
     const checkDate = date ?? this.getTodayDate();
 
+    logger.debug("[StreakService] checkAndUpdateDailyStreak iniciado", {
+      userId,
+      checkDate,
+    });
+
     try {
       // Obter progresso diário de hoje
       const dailyProgress = await this.firestore.getDailyProgress(
@@ -155,11 +161,23 @@ export class StreakService {
         checkDate
       );
 
+      logger.debug("[StreakService] Progresso diário obtido", {
+        userId,
+        checkDate,
+        cardsReviewed: dailyProgress.cardsReviewed,
+        goalMet: dailyProgress.goalMet,
+        target: DAILY_GOAL_TARGET,
+      });
+
       // Verificar se a meta foi atingida hoje
       if (
         !dailyProgress.goalMet ||
         dailyProgress.cardsReviewed < DAILY_GOAL_TARGET
       ) {
+        logger.debug("[StreakService] Meta não atingida, ignorando streak", {
+          userId,
+          checkDate,
+        });
         return null;
       }
 
@@ -168,16 +186,28 @@ export class StreakService {
       try {
         streakData = await this.firestore.getStreakData(userId);
 
-        const lastUpdateDate = streakData.lastUpdate
-          ? this.toDateString(streakData.lastUpdate)
-          : null;
-
+        // IMPORTANTE: Verificar APENAS pelo histórico, não pelo lastUpdate
+        // O lastUpdate pode ser atualizado em outras situações (como reset de streak)
+        // O único indicador confiável é se há um registro na história com a data de hoje
         const hasHistoryToday = Array.isArray(streakData.history)
-          ? streakData.history.some((h) => h.date === checkDate)
+          ? streakData.history.some((h) => h.date === checkDate && h.count > 0)
           : false;
 
-        if (lastUpdateDate === checkDate || hasHistoryToday) {
+        logger.debug("[StreakService] Verificando histórico de streak", {
+          userId,
+          checkDate,
+          hasHistoryToday,
+          currentStreak: streakData.current,
+          historyLength: streakData.history?.length ?? 0,
+          lastHistoryEntries: streakData.history?.slice(-3),
+        });
+
+        if (hasHistoryToday) {
           // Já processado hoje — retornar o streak atual sem modificar
+          logger.debug("[StreakService] Streak já processado hoje", {
+            userId,
+            checkDate,
+          });
           return {
             streakData,
             bonusAwarded: 0,
@@ -185,6 +215,9 @@ export class StreakService {
         }
       } catch {
         // Se não existir registro de streak, vamos criar
+        logger.debug("[StreakService] Nenhum registro de streak encontrado, será criado", {
+          userId,
+        });
         streakData = null;
       }
 
@@ -200,21 +233,43 @@ export class StreakService {
         yesterdayGoalMet =
           yesterdayProgress.goalMet &&
           yesterdayProgress.cardsReviewed >= DAILY_GOAL_TARGET;
+        
+        logger.debug("[StreakService] Verificando meta de ontem", {
+          userId,
+          yesterday,
+          yesterdayGoalMet,
+          yesterdayCards: yesterdayProgress.cardsReviewed,
+        });
       } catch {
         // Sem dados de ontem = não atingiu meta
+        logger.debug("[StreakService] Sem dados de ontem", { userId, yesterday });
         yesterdayGoalMet = false;
       }
 
       // Se ontem NÃO atingiu a meta, precisamos resetar o streak para 1
       if (!yesterdayGoalMet) {
         // Resetar streak e começar novo com 1
+        logger.info("[StreakService] Iniciando novo streak (ontem não atingiu meta)", {
+          userId,
+          checkDate,
+        });
         return await this.startNewStreak(userId, checkDate);
       }
 
       // Ontem atingiu a meta, então incrementar streak normalmente
+      logger.info("[StreakService] Incrementando streak (consecutivo)", {
+        userId,
+        checkDate,
+        currentStreak: streakData?.current ?? 0,
+      });
       return await this.incrementStreak(userId);
     } catch (error) {
       // Se não existe progresso diário, não fazer nada
+      logger.error("[StreakService] Erro ao processar streak", {
+        userId,
+        checkDate,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return null;
     }
   }
@@ -241,26 +296,46 @@ export class StreakService {
       // Primeiro streak do usuário
     }
 
-    // Criar novo streak começando em 1
-    const updatedStreakData = await this.firestore.updateStreak(userId, {
-      current: 1,
-      longest: Math.max(1, currentLongest),
-      history: [...currentHistory, { date, count: 1 }],
-      lastUpdate: new Date(),
+    logger.info("[StreakService] startNewStreak - Criando streak de 1", {
+      userId,
+      date,
+      previousLongest: currentLongest,
     });
 
-    // Sincronizar com UserProgress
-    await this.firestore.updateUserProgress(userId, {
-      currentStreak: 1,
-      longestStreak: Math.max(1, currentLongest),
-      lastActivityDate: new Date(),
-    });
+    try {
+      // Criar novo streak começando em 1
+      const updatedStreakData = await this.firestore.updateStreak(userId, {
+        current: 1,
+        longest: Math.max(1, currentLongest),
+        history: [...currentHistory, { date, count: 1 }],
+        lastUpdate: new Date(),
+      });
 
-    // Não há bônus para streak de 1 dia
-    return {
-      streakData: updatedStreakData,
-      bonusAwarded: 0,
-    };
+      // Sincronizar com UserProgress
+      await this.firestore.updateUserProgress(userId, {
+        currentStreak: 1,
+        longestStreak: Math.max(1, currentLongest),
+        lastActivityDate: new Date(),
+      });
+
+      logger.info("[StreakService] startNewStreak - Streak criado com sucesso", {
+        userId,
+        newStreak: updatedStreakData.current,
+      });
+
+      // Não há bônus para streak de 1 dia
+      return {
+        streakData: updatedStreakData,
+        bonusAwarded: 0,
+      };
+    } catch (error) {
+      logger.error("[StreakService] startNewStreak - ERRO ao salvar streak", {
+        userId,
+        date,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw error;
+    }
   }
 
   /**
