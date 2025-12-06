@@ -215,9 +215,12 @@ export class StreakService {
         }
       } catch {
         // Se não existir registro de streak, vamos criar
-        logger.debug("[StreakService] Nenhum registro de streak encontrado, será criado", {
-          userId,
-        });
+        logger.debug(
+          "[StreakService] Nenhum registro de streak encontrado, será criado",
+          {
+            userId,
+          }
+        );
         streakData = null;
       }
 
@@ -233,7 +236,7 @@ export class StreakService {
         yesterdayGoalMet =
           yesterdayProgress.goalMet &&
           yesterdayProgress.cardsReviewed >= DAILY_GOAL_TARGET;
-        
+
         logger.debug("[StreakService] Verificando meta de ontem", {
           userId,
           yesterday,
@@ -242,17 +245,23 @@ export class StreakService {
         });
       } catch {
         // Sem dados de ontem = não atingiu meta
-        logger.debug("[StreakService] Sem dados de ontem", { userId, yesterday });
+        logger.debug("[StreakService] Sem dados de ontem", {
+          userId,
+          yesterday,
+        });
         yesterdayGoalMet = false;
       }
 
       // Se ontem NÃO atingiu a meta, precisamos resetar o streak para 1
       if (!yesterdayGoalMet) {
         // Resetar streak e começar novo com 1
-        logger.info("[StreakService] Iniciando novo streak (ontem não atingiu meta)", {
-          userId,
-          checkDate,
-        });
+        logger.info(
+          "[StreakService] Iniciando novo streak (ontem não atingiu meta)",
+          {
+            userId,
+            checkDate,
+          }
+        );
         return await this.startNewStreak(userId, checkDate);
       }
 
@@ -318,10 +327,13 @@ export class StreakService {
         lastActivityDate: new Date(),
       });
 
-      logger.info("[StreakService] startNewStreak - Streak criado com sucesso", {
-        userId,
-        newStreak: updatedStreakData.current,
-      });
+      logger.info(
+        "[StreakService] startNewStreak - Streak criado com sucesso",
+        {
+          userId,
+          newStreak: updatedStreakData.current,
+        }
+      );
 
       // Não há bônus para streak de 1 dia
       return {
