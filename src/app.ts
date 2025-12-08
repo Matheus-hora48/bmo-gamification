@@ -14,6 +14,7 @@ import {
 } from "./middlewares/error.middleware";
 import { rateLimiter } from "./middlewares/rate-limit.middleware";
 import routes from "./routes";
+import pingRoutes from "./routes/ping.routes";
 import { logger } from "./utils/logger";
 
 dotenv.config();
@@ -42,6 +43,9 @@ app.use((req, _res, next) => {
 app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
+
+// Rotas de ping para keep-alive (não requer autenticação)
+app.use("/ping", pingRoutes);
 
 // Swagger Documentation (público)
 app.use(
