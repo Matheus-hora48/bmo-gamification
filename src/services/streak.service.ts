@@ -28,10 +28,35 @@ export class StreakService {
       throw new Error("ID do usuário é obrigatório.");
     }
 
+    const today = this.getTodayDate();
+
     // Obter dados de streak atuais (ou criar se não existir)
     let currentStreakData: StreakData;
     try {
       currentStreakData = await this.firestore.getStreakData(userId);
+
+      // IMPORTANTE: Verificar se já existe entrada para hoje no histórico
+      // Isso evita duplicação quando o cron job e o processamento em tempo real
+      // tentam incrementar o streak no mesmo dia
+      const hasHistoryToday = Array.isArray(currentStreakData.history)
+        ? currentStreakData.history.some((h) => h.date === today && h.count > 0)
+        : false;
+
+      if (hasHistoryToday) {
+        logger.debug(
+          "[StreakService] incrementStreak - já existe entrada para hoje, ignorando",
+          {
+            userId,
+            today,
+            currentStreak: currentStreakData.current,
+          }
+        );
+        // Retornar o streak atual sem modificar
+        return {
+          streakData: currentStreakData,
+          bonusAwarded: 0,
+        };
+      }
     } catch {
       // Se não existir, criar novo registro de streak
       currentStreakData = {
@@ -46,9 +71,8 @@ export class StreakService {
 
     const newCurrent = currentStreakData.current + 1;
     const newLongest = Math.max(newCurrent, currentStreakData.longest);
-    const today = this.getTodayDate();
 
-    // Adicionar à história
+    // Adicionar à história (já verificamos que não existe entrada para hoje)
     const updatedHistory = [
       ...currentStreakData.history,
       { date: today, count: newCurrent },
@@ -71,6 +95,12 @@ export class StreakService {
 
     // Verificar e premiar bônus de streak
     const bonusResult = await this.checkStreakBonus(userId, newCurrent);
+
+    logger.info("[StreakService] incrementStreak - streak incrementado", {
+      userId,
+      newCurrent,
+      newLongest,
+    });
 
     return {
       streakData: updatedStreakData,
@@ -443,14 +473,25 @@ export class StreakService {
    * - Se ontem atingiu meta E anteontem também → incrementa streak
    * - Se ontem atingiu meta MAS anteontem não → inicia novo streak em 1
    * - Se ontem NÃO atingiu meta → reseta streak para 0
+   *
+   * @param options Configurações de batch para evitar estouro de cota
    */
-  async updateAllStreaks(): Promise<{
+  async updateAllStreaks(options?: {
+    batchSize?: number;
+    batchDelayMs?: number;
+    maxUsers?: number;
+  }): Promise<{
     totalProcessed: number;
     incremented: number;
     reset: number;
     started: number;
+    skipped: number;
     errors: string[];
   }> {
+    const batchSize = options?.batchSize ?? 50;
+    const batchDelayMs = options?.batchDelayMs ?? 0;
+    const maxUsers = options?.maxUsers ?? Infinity;
+
     const yesterday = this.getYesterdayDate();
     const dayBeforeYesterday = this.getDateMinusDays(yesterday, 1);
     const errors: string[] = [];
@@ -458,65 +499,119 @@ export class StreakService {
     let incremented = 0;
     let reset = 0;
     let started = 0;
+    let skipped = 0;
 
     try {
       // Buscar todos os usuários com progresso
-      const allUserIds = await this.getAllUserIds();
+      let allUserIds = await this.getAllUserIds();
 
-      for (const userId of allUserIds) {
-        try {
-          totalProcessed++;
+      // Limitar número de usuários se configurado
+      if (allUserIds.length > maxUsers) {
+        logger.info(
+          `[StreakService] Limitando de ${allUserIds.length} para ${maxUsers} usuários`
+        );
+        skipped = allUserIds.length - maxUsers;
+        allUserIds = allUserIds.slice(0, maxUsers);
+      }
 
-          // Verificar se a meta diária de ontem foi atingida
-          let yesterdayGoalMet = false;
+      logger.info(
+        `[StreakService] Processando ${allUserIds.length} usuários em batches de ${batchSize}`
+      );
+
+      // Processar em batches
+      for (let i = 0; i < allUserIds.length; i += batchSize) {
+        const batch = allUserIds.slice(i, i + batchSize);
+        const batchNumber = Math.floor(i / batchSize) + 1;
+        const totalBatches = Math.ceil(allUserIds.length / batchSize);
+
+        logger.debug(
+          `[StreakService] Processando batch ${batchNumber}/${totalBatches} (${batch.length} usuários)`
+        );
+
+        for (const userId of batch) {
           try {
-            const yesterdayProgress = await this.firestore.getDailyProgress(
-              userId,
-              yesterday
-            );
-            yesterdayGoalMet =
-              yesterdayProgress.goalMet &&
-              yesterdayProgress.cardsReviewed >= DAILY_GOAL_TARGET;
-          } catch {
-            yesterdayGoalMet = false;
-          }
+            totalProcessed++;
 
-          if (!yesterdayGoalMet) {
-            // Ontem NÃO atingiu meta: resetar streak
-            await this.resetStreak(userId);
-            reset++;
-            continue;
-          }
+            // Verificar se a meta diária de ontem foi atingida
+            let yesterdayGoalMet = false;
+            try {
+              const yesterdayProgress = await this.firestore.getDailyProgress(
+                userId,
+                yesterday
+              );
+              yesterdayGoalMet =
+                yesterdayProgress.goalMet &&
+                yesterdayProgress.cardsReviewed >= DAILY_GOAL_TARGET;
+            } catch {
+              yesterdayGoalMet = false;
+            }
 
-          // Ontem atingiu meta, verificar anteontem para saber se incrementa ou inicia novo
-          let dayBeforeYesterdayGoalMet = false;
-          try {
-            const dayBeforeProgress = await this.firestore.getDailyProgress(
-              userId,
-              dayBeforeYesterday
-            );
-            dayBeforeYesterdayGoalMet =
-              dayBeforeProgress.goalMet &&
-              dayBeforeProgress.cardsReviewed >= DAILY_GOAL_TARGET;
-          } catch {
-            dayBeforeYesterdayGoalMet = false;
-          }
+            if (!yesterdayGoalMet) {
+              // Ontem NÃO atingiu meta: resetar streak
+              await this.resetStreak(userId);
+              reset++;
+              continue;
+            }
 
-          if (dayBeforeYesterdayGoalMet) {
-            // Anteontem também atingiu: incrementar streak
-            await this.incrementStreak(userId);
-            incremented++;
-          } else {
-            // Anteontem NÃO atingiu: iniciar novo streak em 1
-            await this.startNewStreak(userId, yesterday);
-            started++;
+            // Ontem atingiu meta, verificar anteontem para saber se incrementa ou inicia novo
+            let dayBeforeYesterdayGoalMet = false;
+            try {
+              const dayBeforeProgress = await this.firestore.getDailyProgress(
+                userId,
+                dayBeforeYesterday
+              );
+              dayBeforeYesterdayGoalMet =
+                dayBeforeProgress.goalMet &&
+                dayBeforeProgress.cardsReviewed >= DAILY_GOAL_TARGET;
+            } catch {
+              dayBeforeYesterdayGoalMet = false;
+            }
+
+            if (dayBeforeYesterdayGoalMet) {
+              // Anteontem também atingiu: incrementar streak
+              await this.incrementStreak(userId);
+              incremented++;
+            } else {
+              // Anteontem NÃO atingiu: iniciar novo streak em 1
+              await this.startNewStreak(userId, yesterday);
+              started++;
+            }
+          } catch (err) {
+            const errorMsg = `Erro ao atualizar streak do usuário ${userId}: ${
+              err instanceof Error ? err.message : String(err)
+            }`;
+            errors.push(errorMsg);
+            logger.error(`[StreakService] ${errorMsg}`);
+
+            // Se for erro de cota, parar imediatamente
+            if (
+              err instanceof Error &&
+              err.message.includes("RESOURCE_EXHAUSTED")
+            ) {
+              logger.error(
+                "[StreakService] ⚠️ Cota do Firebase esgotada! Parando processamento."
+              );
+              return {
+                totalProcessed,
+                incremented,
+                reset,
+                started,
+                skipped: skipped + (allUserIds.length - totalProcessed),
+                errors: [
+                  ...errors,
+                  "Processamento interrompido: cota do Firebase esgotada",
+                ],
+              };
+            }
           }
-        } catch (err) {
-          const errorMsg = `Erro ao atualizar streak do usuário ${userId}: ${
-            err instanceof Error ? err.message : String(err)
-          }`;
-          errors.push(errorMsg);
-          console.error(errorMsg);
+        }
+
+        // Aguardar entre batches para não sobrecarregar o Firebase
+        if (batchDelayMs > 0 && i + batchSize < allUserIds.length) {
+          logger.debug(
+            `[StreakService] Aguardando ${batchDelayMs}ms antes do próximo batch...`
+          );
+          await this.sleep(batchDelayMs);
         }
       }
 
@@ -525,6 +620,7 @@ export class StreakService {
         incremented,
         reset,
         started,
+        skipped,
         errors,
       };
     } catch (err) {
@@ -534,6 +630,13 @@ export class StreakService {
         }`
       );
     }
+  }
+
+  /**
+   * Função auxiliar para aguardar um tempo
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
