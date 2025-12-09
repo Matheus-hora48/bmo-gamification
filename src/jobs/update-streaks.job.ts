@@ -15,9 +15,24 @@ import { logger } from "../utils/logger";
  * 4. Resetar streak se meta não foi atingida
  * 5. Aplicar bônus de streak (7 dias = 200 XP, 30 dias = 300 XP)
  * 6. Registrar logs de execução
+ *
+ * OTIMIZAÇÃO PARA PLANO GRATUITO:
+ * - Processa em batches de 10 usuários
+ * - Aguarda 2 segundos entre batches
+ * - Limite máximo de 100 usuários por execução
  */
 
 const streakService = new StreakService();
+
+// Configurações para evitar estouro de cota
+const BATCH_SIZE = 10; // Usuários por batch
+const BATCH_DELAY_MS = 2000; // 2 segundos entre batches
+const MAX_USERS_PER_RUN = 100; // Limite máximo por execução
+
+/**
+ * Função para aguardar um tempo
+ */
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Executa a atualização de streaks de todos os usuários
@@ -26,10 +41,18 @@ const streakService = new StreakService();
 export const executeUpdateStreaks = async (): Promise<void> => {
   const startTime = Date.now();
   logger.info("🔥 [CRON] Iniciando atualização de streaks...");
+  logger.info(
+    `📊 [CRON] Configuração: batch=${BATCH_SIZE}, delay=${BATCH_DELAY_MS}ms, maxUsers=${MAX_USERS_PER_RUN}`
+  );
 
   try {
     // Executa a atualização de todos os streaks usando o StreakService
-    const result = await streakService.updateAllStreaks();
+    // Passando configurações de batch para evitar estouro de cota
+    const result = await streakService.updateAllStreaks({
+      batchSize: BATCH_SIZE,
+      batchDelayMs: BATCH_DELAY_MS,
+      maxUsers: MAX_USERS_PER_RUN,
+    });
 
     const duration = Date.now() - startTime;
 
@@ -38,9 +61,18 @@ export const executeUpdateStreaks = async (): Promise<void> => {
       totalProcessed: result.totalProcessed,
       incremented: result.incremented,
       reset: result.reset,
+      started: result.started,
+      skipped: result.skipped,
       errors: result.errors.length,
       duration: `${duration}ms`,
     });
+
+    // Se houver usuários pulados, avisar
+    if (result.skipped > 0) {
+      logger.warn(
+        `⚠️ [CRON] ${result.skipped} usuários foram pulados (limite de ${MAX_USERS_PER_RUN} por execução)`
+      );
+    }
 
     // Se houver erros, registrar em nível de warning
     if (result.errors.length > 0) {
@@ -57,6 +89,8 @@ export const executeUpdateStreaks = async (): Promise<void> => {
       totalUsuarios: result.totalProcessed,
       streaksIncrementados: result.incremented,
       streaksResetados: result.reset,
+      streaksIniciados: result.started,
+      usuariosPulados: result.skipped,
       erros: result.errors,
       percentualSucesso:
         result.totalProcessed > 0
